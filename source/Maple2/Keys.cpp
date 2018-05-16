@@ -266,4 +266,32 @@ const std::uint8_t MS2F_IV_LUT[128][16] = {
 	{ 0x98, 0xF1, 0xFC, 0x50, 0xAC, 0x44, 0x43, 0x7C, 0x10, 0xDD, 0x77, 0x3D, 0xDC, 0xD4, 0x65, 0xFD }
 };
 
+
+const std::uint8_t NS2F_Key_LUT[128][32] = {
+// Todo(Wunkolo): Need to dump this at runtime
+	0
+};
+const std::uint8_t NS2F_IV_LUT[128][16] = {
+// Todo(Wunkolo): Need to dump this at runtime
+	0
+};
+
+const std::uint8_t OS2F_Key_LUT[128][32] = {
+// Todo(Wunkolo): Need to dump this at runtime
+	0
+};
+const std::uint8_t OS2F_IV_LUT[128][16] = {
+// Todo(Wunkolo): Need to dump this at runtime
+	0
+};
+
+const std::uint8_t PS2F_Key_LUT[128][32] = {
+// Todo(Wunkolo): Need to dump this at runtime
+	0
+};
+const std::uint8_t PS2F_IV_LUT[128][16] = {
+// Todo(Wunkolo): Need to dump this at runtime
+	0
+};
+
 }
