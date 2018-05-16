@@ -34,6 +34,7 @@ endif()
 add_executable(
 	m2h
 	source/m2h.cpp
+	source/Maple2/Keys.cpp
 )
 target_link_libraries(
 	m2h
