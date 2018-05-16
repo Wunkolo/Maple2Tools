@@ -9,21 +9,33 @@ namespace Maple2
 {
 #pragma pack(1)
 
-struct PackFileHeaderVer1
+struct PackFileHeaderVer1 // MS2F
 {
 private:
-	std::uint32_t Unknown00; // Pad
+	std::uint32_t Unknown00;              // Always zero
 public:
 
-	std::uint64_t FATCompressedSize;      // TableCompressedSize (Key Index)
-	std::uint64_t FATEncodedSize;         // TableEncodedSize
+	std::uint64_t FATCompressedSize;      // DEFLATE length
+	std::uint64_t FATEncodedSize;         // Base64 length
 
-	std::uint64_t FileListSize;           // FileListSize
-	std::uint64_t FileListCompressedSize; // FileListCompressedSize (Key Index)
-	std::uint64_t FileListEncodedSize;    // FileListEncodedSize
+	std::uint64_t FileListSize;           // Uncompressed size
+	std::uint64_t FileListCompressedSize; // DEFLATE length
+	std::uint64_t FileListEncodedSize;    // Base64 length
 
 	std::uint64_t TotalFiles;             // Total Files
 	std::uint64_t FATSize;                // Uncompressed size
+};
+
+struct PackFileHeaderVer2 // NS2F
+{
+	std::uint32_t TotalFiles;
+	std::uint64_t FATCompressedSize;      // DEFLATE length
+	std::uint64_t FATEncodedSize;         // Base64 length
+	std::uint64_t FATSize;                // Uncompressed size
+
+	std::uint64_t FileListB64Size;
+	std::uint64_t FileListEncodedSize;    // Base64 length
+	std::uint64_t FileListSize;           // Uncompressed size
 };
 
 struct FATEntry
