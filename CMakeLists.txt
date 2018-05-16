@@ -31,13 +31,21 @@ elseif( CMAKE_COMPILER_IS_GNUCXX )
 endif()
 
 ### Targets
+
+add_library(
+	Maple2
+	STATIC
+	source/Maple2/Keys.cpp
+)
+
 add_executable(
 	m2h
 	source/m2h.cpp
-	source/Maple2/Keys.cpp
 )
 target_link_libraries(
 	m2h
+	PRIVATE
+	Maple2
 	cryptopp
 	z
 )
