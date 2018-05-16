@@ -38,9 +38,10 @@ add_library(
 	source/Maple2/Keys.cpp
 )
 
+## M2H Research
 add_executable(
 	m2h
-	source/m2h.cpp
+	test/m2h.cpp
 )
 target_link_libraries(
 	m2h

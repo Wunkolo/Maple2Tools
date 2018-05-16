@@ -55,12 +55,17 @@ std::string Decrypt( const std::string& Cipher , std::size_t KeyIndex )
 }
 
 
-void HexDump( const char* desc, void* addr, std::size_t len);
+void HexDump( const char* Desription, const void* Data, std::size_t Size);
 
-bool ProcessHeaderFile( const char* Path );
+bool ProcessFile( const std::string& HeaderPath );
 
 int main( int argc, char* argv[] )
 {
+	std::puts(
+		"Maplestory2 PackFile tool:\n"
+		"Build Date" __TIMESTAMP__ "\n"
+		"\t- wunkolo <wunkolo@gmail.com>"
+	);
 	if( argc < 2 )
 	{
 		std::puts("No argument given");
@@ -69,17 +74,17 @@ int main( int argc, char* argv[] )
 
 	for( std::size_t i = 1; i < static_cast<std::size_t>(argc); ++i )
 	{
-		ProcessHeaderFile(argv[i]);
+		ProcessFile(argv[i]);
 	}
 
 	return EXIT_SUCCESS;
 }
 
-bool ProcessHeaderFile( const char* Path )
+bool ProcessFile( const std::string& HeaderPath )
 {
 	std::ifstream FileIn;
 	FileIn.open(
-		Path,
+		HeaderPath,
 		std::ios::binary
 	);
 
@@ -88,13 +93,34 @@ bool ProcessHeaderFile( const char* Path )
 		// Error opening file
 		std::printf(
 			"Error opening file for reading: %s\n",
-			Path
+			HeaderPath.c_str()
 		);
 		return false;
 	}
 
 	std::uint32_t Magic = 0;
 	Magic = Util::Read<std::uint32_t>(FileIn);
+
+	switch( static_cast<Maple2::Magic>(Magic) )
+	{
+	case Maple2::Magic::MS2F:
+	{
+		break;
+	}
+	case Maple2::Magic::NS2F:
+	{
+		break;
+	}
+	case Maple2::Magic::OS2F:
+	{
+		break;
+	}
+	case Maple2::Magic::PS2F:
+	{
+		break;
+	}
+	}
+
 	Maple2::PackFileHeaderVer1 CurHeader = {};
 	CurHeader = Util::Read<Maple2::PackFileHeaderVer1>(FileIn);
 
@@ -110,8 +136,8 @@ bool ProcessHeaderFile( const char* Path )
 		"FATSize: %zx ( %zu )\n"
 		"\n"
 		,
-		Path,
-		Magic                , (char*)&Magic,
+		HeaderPath.c_str(),
+		Magic, reinterpret_cast<const char*>(&Magic),
 		CurHeader.FATCompressedSize, CurHeader.FATCompressedSize,
 		CurHeader.FATEncodedSize, CurHeader.FATEncodedSize,
 		CurHeader.FileListSize, CurHeader.FileListSize,
@@ -130,8 +156,12 @@ bool ProcessHeaderFile( const char* Path )
 		CurHeader.FileListEncodedSize
 	);
 
-	HexDump( "FileList Cipher", FileList.data(), FileList.size() );
-	
+	HexDump(
+		"FileList Cipher",
+		FileList.data(),
+		std::min<std::size_t>( FileList.size(), 256 )
+	);
+
 	std::string DecryptedFL;
 
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DecryptorFL;
@@ -162,7 +192,11 @@ bool ProcessHeaderFile( const char* Path )
 	);
 	FileList = DecompressedFL;
 
-	HexDump( "File List", FileList.data(), FileList.size() );
+	HexDump(
+		"File List",
+		FileList.data(),
+		std::min<std::size_t>( FileList.size(), 256 )
+	);
 
 	std::printf(
 		"------------------------------------------------\n"
@@ -171,7 +205,7 @@ bool ProcessHeaderFile( const char* Path )
 		FileList.c_str()
 	);
 
-	
+
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
 	std::string FileAllocationTable;
@@ -184,7 +218,7 @@ bool ProcessHeaderFile( const char* Path )
 	HexDump(
 		"FAT Cipher",
 		FileAllocationTable.data(),
-		FileAllocationTable.size()
+		std::min<std::size_t>( FileAllocationTable.size(), 256 )
 	);
 
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DecryptorTOC;
@@ -215,14 +249,14 @@ bool ProcessHeaderFile( const char* Path )
 		reinterpret_cast<const std::uint8_t*>(DecryptedTOC.c_str()),
 		DecryptedTOC.size()
 	);
-	
+
 	HexDump(
 		"File Allocation Table",
 		FATable.data(),
-		FATable.size() * sizeof(Maple2::FATEntry)
+		std::min<std::size_t>( FATable.size() * sizeof(Maple2::FATEntry), 256)
 	);
 
-	for( const Maple2::FATEntry& CurEntry : FATable )
+	for( std::size_t i = 0; i < FATable.size() % 256; ++i )
 	{
 		std::printf(
 			"FileIndex: %u\n"
@@ -230,51 +264,127 @@ bool ProcessHeaderFile( const char* Path )
 			"EncodedSize: %zu\n"
 			"CompressedSize: %zu\n"
 			"Size: %zu\n",
-			CurEntry.FileIndex,
-			CurEntry.Offset,
-			CurEntry.EncodedSize,
-			CurEntry.CompressedSize,
-			CurEntry.Size
+			FATable[i].FileIndex,
+			FATable[i].Offset,
+			FATable[i].EncodedSize,
+			FATable[i].CompressedSize,
+			FATable[i].Size
 		);
 	}
 
+	////////////////////////////////////////////////////////////////////////////
+	// Process data file
+	const std::string DataPath = HeaderPath.substr(
+		0,
+		HeaderPath.find_last_of('.')
+	) + ".m2d";
+
+	std::printf(
+		"Processing data file: %s\n",
+		DataPath.c_str()
+	);
+
+	std::ifstream DataFile;
+	DataFile.open(
+		DataPath,
+		std::ios::binary
+	);
+
+	if( !DataFile.good() )
+	{
+		// Error opening file
+		std::printf(
+			"Error opening file for reading: %s\n",
+			DataPath.c_str()
+		);
+		return false;
+	}
+
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DataDecryptor;
+	DataDecryptor.SetKeyWithIV(
+		Maple2::MS2F_Key_LUT[CurHeader.FATCompressedSize % 128],
+		32,
+		Maple2::MS2F_IV_LUT[CurHeader.FATCompressedSize % 128]
+	);
+
+	std::string EncodedData;
+	DataFile >> EncodedData;
+	std::printf(
+		"Data Stream: %.128s...\n",
+		EncodedData.c_str()
+	);
+	std::puts("Decrypting");
+	std::string DecryptedData;
+	CryptoPP::StringSource(
+		EncodedData,
+		true,
+		new CryptoPP::Base64Decoder(
+			new CryptoPP::StreamTransformationFilter(
+				DataDecryptor,
+				new CryptoPP::StringSink(DecryptedData)
+			)
+		)
+	);
+
+	HexDump(
+		"DecryptedData: " ,
+		DecryptedData.data(),
+		std::min<std::size_t>( DecryptedData.size(), 256 )
+	);
 	return true;
 }
 
-void HexDump( const char* desc, void* addr, std::size_t len)
+void HexDump( const char* Description, const void* Data, std::size_t Size )
 {
 	std::size_t i;
-	std::uint8_t buff[17];
-	std::uint8_t *pc = (std::uint8_t*)addr;
+	std::uint8_t Buffer[17];
+	const std::uint8_t* CurByte = reinterpret_cast<const std::uint8_t*>(Data);
 
-	// Output description if given.
-	if (desc != NULL)
+	if( Description != NULL)
 	{
-		std::printf ("\e[5m%s ( %zu bytes )\e[0m:\n",
-			desc,
-			len
+		std::printf(
+			"\e[5m%s\e[0m:\n",
+			Description
 		);
 	}
 
-	for (i = 0; i < len; i++)
+	for( i = 0; i < Size; i++ )
 	{
-		if ((i % 16) == 0) {
-			if (i != 0)	std::printf("  \e[0;35m%s\e[0m\n", buff);
-			std::printf("  \e[0;33m%04zx\e[0m ", i);
+		if( (i % 16) == 0 )
+		{
+			if( i != 0)
+			{
+				std::printf("  \e[0;35m%s\e[0m\n", Buffer);
+			}
+
+			std::printf(
+				"  \e[0;33m%04zx\e[0m ",
+				i
+			);
 		}
-		std::printf(" \e[0;36m%02x\e[0m", pc[i]);
-		if ((pc[i] < 0x20) || (pc[i] > 0x7e))
-			buff[i % 16] = '.';
+		std::printf(
+			" \e[0;36m%02x\e[0m",
+			CurByte[i]
+		);
+		if( (CurByte[i] < ' ') || (CurByte[i] > 0x7e) )
+		{
+			Buffer[i % 16] = '.';
+		}
 		else
-			buff[i % 16] = pc[i];
-		buff[(i % 16) + 1] = '\0';
+		{
+			Buffer[i % 16] = CurByte[i];
+		}
+		Buffer[(i % 16) + 1] = '\0';
 	}
 
-	while ((i % 16) != 0)
+	while( (i % 16) != 0 )
 	{
 		std::printf("   ");
 		i++;
 	}
 
-	std::printf("  \e[0;35m%s\e[0m\n", buff);
+	std::printf(
+		"  \e[0;35m%s\e[0m\n",
+		Buffer
+	);
 }
