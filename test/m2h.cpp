@@ -6,6 +6,9 @@
 #include <inttypes.h>
 #include <iostream>
 #include <vector>
+#include <string>
+#include <regex>
+#include <map>
 
 #include <Maple2/Maple2.hpp>
 #include <Util/File.hpp>
@@ -14,46 +17,7 @@
 #include <cryptopp/base64.h>
 #include <cryptopp/modes.h>
 #include <cryptopp/filters.h>
-#include <cryptopp/zinflate.h>
-
-#include <zlib.h>
-
-std::string Decrypt( const std::string& Cipher , std::size_t KeyIndex )
-{
-	std::string Decrypted;
-
-	CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption Decryptor;
-	Decryptor.SetKeyWithIV(
-		Maple2::MS2F_Key_LUT[KeyIndex % 128],
-		32,
-		Maple2::MS2F_IV_LUT[KeyIndex % 128]
-	);
-
-	CryptoPP::StringSource(
-		Cipher,
-		true,
-		new CryptoPP::Base64Decoder(
-			new CryptoPP::StreamTransformationFilter(
-				Decryptor,
-				new CryptoPP::StringSink(Decrypted)
-			)
-		)
-	);
-
-	std::string Decompressed;
-	Decompressed.resize(Cipher.size() * 8);
-
-	std::uint64_t DecompressedSize;
-	uncompress(
-		reinterpret_cast<std::uint8_t*>(&Decompressed[0]),
-		&DecompressedSize,
-		reinterpret_cast<const std::uint8_t*>(Decrypted.c_str()),
-		Decrypted.size()
-	);
-	Decompressed.resize(DecompressedSize);
-	return Decompressed;
-}
-
+#include <cryptopp/zlib.h>
 
 void HexDump( const char* Desription, const void* Data, std::size_t Size);
 
@@ -176,35 +140,41 @@ bool ProcessFile( const std::string& HeaderPath )
 		new CryptoPP::Base64Decoder(
 			new CryptoPP::StreamTransformationFilter(
 				DecryptorFL,
-				new CryptoPP::StringSink(DecryptedFL)
+				new CryptoPP::ZlibDecompressor(
+					new CryptoPP::StringSink(DecryptedFL)
+				)
 			)
 		)
 	);
-
-	std::string DecompressedFL;
-	DecompressedFL.resize(CurHeader.FileListSize);
-	std::uint64_t DecompressedFLSize;
-	uncompress(
-		reinterpret_cast<std::uint8_t*>(&DecompressedFL[0]),
-		&DecompressedFLSize,
-		reinterpret_cast<const std::uint8_t*>(DecryptedFL.c_str()),
-		DecryptedFL.size()
-	);
-	FileList = DecompressedFL;
+	FileList = DecryptedFL;
 
 	HexDump(
 		"File List",
-		FileList.data(),
+		FileList.c_str(),
 		std::min<std::size_t>( FileList.size(), 256 )
 	);
 
-	std::printf(
-		"------------------------------------------------\n"
-		"%s\n"
-		"------------------------------------------------\n",
-		FileList.c_str()
-	);
+	std::map<std::size_t, std::string> FileListEntries;
+	{
+		// Split based on \r\n
+		std::regex RegExNewline("[\r\n]+");
+		std::sregex_token_iterator TokenIter(FileList.begin(),FileList.end(),RegExNewline,-1);
+		std::sregex_token_iterator TokenEnd;
 
+		for( ;TokenIter != TokenEnd; ++TokenIter )
+		{
+			const std::string CurFileLine = (*TokenIter).str();
+			
+			const std::string FileIndex = CurFileLine.substr( 0, CurFileLine.find_first_of(',') );
+			const std::string FileName = CurFileLine.substr( CurFileLine.find_last_of(',') + 1 );
+			std::printf(
+				"%s:\t%s\n",
+				FileIndex.c_str(),
+				FileName.c_str()
+			);
+			FileListEntries[ std::stoull(FileIndex) ] = FileName;
+		}
+	}
 
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
@@ -235,18 +205,18 @@ bool ProcessFile( const std::string& HeaderPath )
 		new CryptoPP::Base64Decoder(
 			new CryptoPP::StreamTransformationFilter(
 				DecryptorTOC,
-				new CryptoPP::StringSink(DecryptedTOC)
+				new CryptoPP::ZlibDecompressor(
+					new CryptoPP::StringSink(DecryptedTOC)
+				)
 			)
 		)
 	);
 
 	std::vector<Maple2::FATEntry> FATable;
 	FATable.resize(CurHeader.TotalFiles);
-	std::uint64_t DecompressedTOCSize;
-	uncompress(
-		reinterpret_cast<std::uint8_t*>(FATable.data()),
-		&DecompressedTOCSize,
-		reinterpret_cast<const std::uint8_t*>(DecryptedTOC.c_str()),
+	std::memcpy(
+		FATable.data(),
+		DecryptedTOC.data(),
 		DecryptedTOC.size()
 	);
 
@@ -300,14 +270,16 @@ bool ProcessFile( const std::string& HeaderPath )
 		return false;
 	}
 
-	for( std::size_t i = 0; i < FATable.size() % 256; ++i )
+	for( std::size_t i = 0; i < FATable.size(); ++i )
 	{
 		std::printf(
+			"FileName: %s\n"
 			"FileIndex: %u\n"
 			"Offset: %zu\n"
 			"EncodedSize: %zu\n"
 			"CompressedSize: %zu\n"
 			"Size: %zu\n",
+			FileListEntries[i + 1].c_str(),
 			FATable[i].FileIndex,
 			FATable[i].Offset,
 			FATable[i].EncodedSize,
@@ -337,7 +309,7 @@ bool ProcessFile( const std::string& HeaderPath )
 			Maple2::MS2F_IV_LUT[FATable[i].CompressedSize % 128]
 		);
 
-		std::string DecryptedData;
+		std::string PlaintextData;
 
 		CryptoPP::StringSource(
 			EncodedData,
@@ -345,42 +317,19 @@ bool ProcessFile( const std::string& HeaderPath )
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					DataDecryptor,
-					new CryptoPP::StringSink(DecryptedData)
+					new CryptoPP::ZlibDecompressor(
+						new CryptoPP::StringSink(PlaintextData)
+					)
 				)
 			)
 		);
 
-		std::string DecompressedData;
-		DecompressedData.resize(FATable[i].Size);
-		std::uint64_t DecompressedDataSize;
-		uncompress(
-			reinterpret_cast<std::uint8_t*>(&DecompressedData[0]),
-			&DecompressedDataSize,
-			reinterpret_cast<const std::uint8_t*>(DecryptedData.c_str()),
-			DecryptedData.size()
-		);
-
-		std::string Data;
-		Data = DecompressedData;
-
 		HexDump(
-			"DecryptedData: " ,
-			Data.data(),
-		std::min<std::size_t>( Data.size(), 256 )
+			"PlaintextData: " ,
+			PlaintextData.data(),
+			std::min<std::size_t>( PlaintextData.size(), 256 )
 		);
 	}
-	// std::uint64_t DecompressedDataSize;
-	// uncompress(
-	// 	reinterpret_cast<std::uint8_t*>(FATable.data()),
-	// 	&DecompressedTOCSize,
-	// 	reinterpret_cast<const std::uint8_t*>(DecryptedTOC.c_str()),
-	// 	DecryptedTOC.size()
-	// );
-
-	// for( std::size_t i = 0; i < DecryptedData.size(); ++i )
-	// {
-	// 	DecryptedData[i] ^= Maple2::MS2F_XOR_Key[ i % 2048 ];
-	// }
 
 	return true;
 }
