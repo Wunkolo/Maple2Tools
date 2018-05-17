@@ -49,5 +49,4 @@ target_link_libraries(
 	stdc++fs
 	Maple2
 	cryptopp
-	z
 )
