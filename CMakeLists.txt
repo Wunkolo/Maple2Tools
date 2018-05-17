@@ -46,6 +46,7 @@ add_executable(
 target_link_libraries(
 	m2h
 	PRIVATE
+	stdc++fs
 	Maple2
 	cryptopp
 	z

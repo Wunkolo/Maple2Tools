@@ -10,6 +10,9 @@
 #include <regex>
 #include <map>
 
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+
 #include <Maple2/Maple2.hpp>
 #include <Util/File.hpp>
 
@@ -311,24 +314,57 @@ bool ProcessFile( const std::string& HeaderPath )
 
 		std::string PlaintextData;
 
-		CryptoPP::StringSource(
-			EncodedData,
-			true,
-			new CryptoPP::Base64Decoder(
-				new CryptoPP::StreamTransformationFilter(
-					DataDecryptor,
-					new CryptoPP::ZlibDecompressor(
+		if( FATable[i].Size != FATable[i].CompressedSize  ) // decompression
+		{
+			CryptoPP::StringSource(
+				EncodedData,
+				true,
+				new CryptoPP::Base64Decoder(
+					new CryptoPP::StreamTransformationFilter(
+						DataDecryptor,
+						new CryptoPP::ZlibDecompressor(
+							new CryptoPP::StringSink(PlaintextData)
+						)
+					)
+				)
+			);
+		}
+		else // no decompression
+		{
+			CryptoPP::StringSource(
+				EncodedData,
+				true,
+				new CryptoPP::Base64Decoder(
+					new CryptoPP::StreamTransformationFilter(
+						DataDecryptor,
 						new CryptoPP::StringSink(PlaintextData)
 					)
 				)
-			)
-		);
+			);
+		}
 
 		HexDump(
 			"PlaintextData: " ,
 			PlaintextData.data(),
 			std::min<std::size_t>( PlaintextData.size(), 256 )
 		);
+
+		fs::create_directories(
+			"Dump" / fs::path( FileListEntries[ i + 1 ] ).parent_path()
+		);
+
+		std::ofstream DumpFile;
+		DumpFile.open(
+			"Dump" / fs::path( FileListEntries[ i + 1 ] ),
+			std::ios::binary
+		);
+
+		DumpFile.write(
+			PlaintextData.data(),
+			PlaintextData.size()
+		);
+
+		DumpFile.close();
 	}
 
 	return true;
