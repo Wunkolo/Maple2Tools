@@ -128,7 +128,7 @@ bool ProcessFile( const std::string& HeaderPath )
 		"File: %s\n"
 		"Magic: %x ( `%.4s` )\n"
 		"FATCompressedSize: %zx ( %zu )\n"
-		"FATEncodedSize: %zx ( %zu ) Size\n"
+		"FATEncodedSize: %zx ( %zu )\n"
 		"FileListSize: %zx ( %zu )\n"
 		"FileListCompressedSize: %zx ( %zu )\n"
 		"FileListEncodedSize: %zx ( %zu )\n"
@@ -256,21 +256,21 @@ bool ProcessFile( const std::string& HeaderPath )
 		std::min<std::size_t>( FATable.size() * sizeof(Maple2::FATEntry), 256)
 	);
 
-	for( std::size_t i = 0; i < FATable.size() % 256; ++i )
-	{
-		std::printf(
-			"FileIndex: %u\n"
-			"Offset: %zu\n"
-			"EncodedSize: %zu\n"
-			"CompressedSize: %zu\n"
-			"Size: %zu\n",
-			FATable[i].FileIndex,
-			FATable[i].Offset,
-			FATable[i].EncodedSize,
-			FATable[i].CompressedSize,
-			FATable[i].Size
-		);
-	}
+	// for( std::size_t i = 0; i < FATable.size() % 256; ++i )
+	// {
+	// 	std::printf(
+	// 		"FileIndex: %u\n"
+	// 		"Offset: %zu\n"
+	// 		"EncodedSize: %zu\n"
+	// 		"CompressedSize: %zu\n"
+	// 		"Size: %zu\n",
+	// 		FATable[i].FileIndex,
+	// 		FATable[i].Offset,
+	// 		FATable[i].EncodedSize,
+	// 		FATable[i].CompressedSize,
+	// 		FATable[i].Size
+	// 	);
+	// }
 
 	////////////////////////////////////////////////////////////////////////////
 	// Process data file
@@ -300,37 +300,88 @@ bool ProcessFile( const std::string& HeaderPath )
 		return false;
 	}
 
-	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DataDecryptor;
-	DataDecryptor.SetKeyWithIV(
-		Maple2::MS2F_Key_LUT[CurHeader.FATCompressedSize % 128],
-		32,
-		Maple2::MS2F_IV_LUT[CurHeader.FATCompressedSize % 128]
-	);
+	for( std::size_t i = 0; i < FATable.size() % 256; ++i )
+	{
+		std::printf(
+			"FileIndex: %u\n"
+			"Offset: %zu\n"
+			"EncodedSize: %zu\n"
+			"CompressedSize: %zu\n"
+			"Size: %zu\n",
+			FATable[i].FileIndex,
+			FATable[i].Offset,
+			FATable[i].EncodedSize,
+			FATable[i].CompressedSize,
+			FATable[i].Size
+		);
 
-	std::string EncodedData;
-	DataFile >> EncodedData;
-	std::printf(
-		"Data Stream: %.128s...\n",
-		EncodedData.c_str()
-	);
-	std::puts("Decrypting");
-	std::string DecryptedData;
-	CryptoPP::StringSource(
-		EncodedData,
-		true,
-		new CryptoPP::Base64Decoder(
-			new CryptoPP::StreamTransformationFilter(
-				DataDecryptor,
-				new CryptoPP::StringSink(DecryptedData)
+		DataFile.seekg( FATable[i].Offset );
+		std::string EncodedData;
+		EncodedData.resize(FATable[i].EncodedSize);
+		DataFile.read(
+			EncodedData.data(),
+			FATable[i].EncodedSize
+		);
+
+		std::printf(
+			"Data Stream: %.128s...\n",
+			EncodedData.c_str()
+		);
+
+		std::puts("Decrypting");
+
+		CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DataDecryptor;
+		DataDecryptor.SetKeyWithIV(
+			Maple2::MS2F_Key_LUT[FATable[i].CompressedSize % 128],
+			32,
+			Maple2::MS2F_IV_LUT[FATable[i].CompressedSize % 128]
+		);
+
+		std::string DecryptedData;
+
+		CryptoPP::StringSource(
+			EncodedData,
+			true,
+			new CryptoPP::Base64Decoder(
+				new CryptoPP::StreamTransformationFilter(
+					DataDecryptor,
+					new CryptoPP::StringSink(DecryptedData)
+				)
 			)
-		)
-	);
+		);
 
-	HexDump(
-		"DecryptedData: " ,
-		DecryptedData.data(),
-		std::min<std::size_t>( DecryptedData.size(), 256 )
-	);
+		std::string DecompressedData;
+		DecompressedData.resize(FATable[i].Size);
+		std::uint64_t DecompressedDataSize;
+		uncompress(
+			reinterpret_cast<std::uint8_t*>(&DecompressedData[0]),
+			&DecompressedDataSize,
+			reinterpret_cast<const std::uint8_t*>(DecryptedData.c_str()),
+			DecryptedData.size()
+		);
+
+		std::string Data;
+		Data = DecompressedData;
+
+		HexDump(
+			"DecryptedData: " ,
+			Data.data(),
+		std::min<std::size_t>( Data.size(), 256 )
+		);
+	}
+	// std::uint64_t DecompressedDataSize;
+	// uncompress(
+	// 	reinterpret_cast<std::uint8_t*>(FATable.data()),
+	// 	&DecompressedTOCSize,
+	// 	reinterpret_cast<const std::uint8_t*>(DecryptedTOC.c_str()),
+	// 	DecryptedTOC.size()
+	// );
+
+	// for( std::size_t i = 0; i < DecryptedData.size(); ++i )
+	// {
+	// 	DecryptedData[i] ^= Maple2::MS2F_XOR_Key[ i % 2048 ];
+	// }
+
 	return true;
 }
 
