@@ -30,8 +30,11 @@ elseif( CMAKE_COMPILER_IS_GNUCXX )
 	add_compile_options( -Wextra )
 endif()
 
-### Targets
 
+## Threads
+find_package( Threads REQUIRED )
+
+### Targets
 add_library(
 	Maple2
 	STATIC
@@ -49,4 +52,5 @@ target_link_libraries(
 	stdc++fs
 	Maple2
 	cryptopp
+	${CMAKE_THREAD_LIBS_INIT}
 )

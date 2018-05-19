@@ -9,6 +9,8 @@
 #include <string>
 #include <regex>
 #include <map>
+#include <thread>
+#include <future>
 
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
@@ -24,7 +26,7 @@ namespace fs = std::experimental::filesystem;
 
 void HexDump( const char* Desription, const void* Data, std::size_t Size);
 
-bool ProcessFile( const fs::path& HeaderPath, fs::path DestPath);
+bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath);
 
 int main( int argc, char* argv[] )
 {
@@ -49,6 +51,7 @@ int main( int argc, char* argv[] )
 		return EXIT_FAILURE;
 	}
 
+	std::vector<std::future<bool>> Tasks;
 	for( const auto& CurEntry : fs::recursive_directory_iterator( SourcePath ) )
 	{
 		if( fs::is_regular_file( CurEntry ) )
@@ -57,6 +60,7 @@ int main( int argc, char* argv[] )
 			const fs::path CurDest = DestPath / CurEntry.path();
 			fs::create_directories(CurDest.parent_path());
 
+			// Create symlink to original files
 			try
 			{
 				fs::create_symlink(
@@ -68,45 +72,31 @@ int main( int argc, char* argv[] )
 			{
 			}
 
+			// Process Header files
 			if( CurSource.extension() == ".m2h" )
 			{
 				const fs::path CurExpansion = CurDest.parent_path() / CurDest.stem();
 				std::cout << CurSource << std::endl;
 				std::cout << CurExpansion << std::endl;
 
-				// Process .m2h
+				// Process .m2h into new folder of the same name
 				fs::create_directory(CurExpansion);
-				ProcessFile( CurSource, CurExpansion );
-			}
-			else if( CurSource.extension() == ".m2d" )
-			{
-				// Ignore .m2d
-			}
-			else
-			{
-				// Copy
-				/*
-				   fs::copy_file(
-				   CurSource,
-				   CurDest,
-				   fs::copy_options::update_existing
-				   );
-				 */
-				// Create symlinks to avoid a file copy for now
-
+				Tasks.emplace_back(
+					std::async(DumpPackFile,CurSource,CurExpansion)
+				);
 			}
 		}
 	}
 
-	for( std::size_t i = 1; i < static_cast<std::size_t>(argc); ++i )
+	for( auto& CurTasks : Tasks )
 	{
-		//ProcessFile(argv[i]);
+		CurTasks.wait();
 	}
 
 	return EXIT_SUCCESS;
 }
 
-bool ProcessFile( const fs::path& HeaderPath, fs::path DestPath)
+bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 {
 	std::ifstream FileIn;
 	FileIn.open(
