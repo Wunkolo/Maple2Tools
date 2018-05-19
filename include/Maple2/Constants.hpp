@@ -1,19 +1,19 @@
 #pragma once
-
+#include <cstdint>
 
 namespace Maple2
 {
 
 constexpr std::uint32_t MakeMagic(
-	char Byte1,	char Byte2,
-	char Byte3,	char Byte4
+	std::uint8_t Byte1, std::uint8_t Byte2,
+	std::uint8_t Byte3, std::uint8_t Byte4
 )
 {
 	return static_cast<std::uint32_t>(
-		static_cast<std::uint8_t>(Byte1) << 24 |
-		static_cast<std::uint8_t>(Byte2) << 16 |
-		static_cast<std::uint8_t>(Byte3) << 8  |
-		static_cast<std::uint8_t>(Byte4)
+		static_cast<std::uint8_t>(Byte4) << 24 |
+		static_cast<std::uint8_t>(Byte3) << 16 |
+		static_cast<std::uint8_t>(Byte2) << 8  |
+		static_cast<std::uint8_t>(Byte1)
 	);
 }
 

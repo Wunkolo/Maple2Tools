@@ -66,24 +66,26 @@ bool ProcessFile( const std::string& HeaderPath )
 	}
 
 	std::uint32_t Magic = 0;
-	Magic = Util::Read<std::uint32_t>(FileIn);
+	Magic = Util::Read<std::uint32_t>( FileIn );
 
-	switch( static_cast<Maple2::Magic>(Magic) )
+	std::printf(
+		"%x\n",
+		Maple2::Magic::NS2F
+	);
+	switch( static_cast<Maple2::Magic>( Magic ) )
 	{
 	case Maple2::Magic::MS2F:
 	{
 		break;
 	}
 	case Maple2::Magic::NS2F:
-	{
-		break;
-	}
 	case Maple2::Magic::OS2F:
-	{
-		break;
-	}
 	case Maple2::Magic::PS2F:
 	{
+		std::puts(
+			"Not implemented"
+		);
+		return false;
 		break;
 	}
 	}
