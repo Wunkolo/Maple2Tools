@@ -24,7 +24,7 @@ namespace fs = std::experimental::filesystem;
 
 void HexDump( const char* Desription, const void* Data, std::size_t Size);
 
-bool ProcessFile( const std::string& HeaderPath );
+bool ProcessFile( const fs::path& HeaderPath, fs::path DestPath);
 
 int main( int argc, char* argv[] )
 {
@@ -33,21 +33,80 @@ int main( int argc, char* argv[] )
 		"Build Date" __TIMESTAMP__ "\n"
 		"\t- wunkolo <wunkolo@gmail.com>"
 	);
-	if( argc < 2 )
+	if( argc < 3 )
 	{
 		std::puts("No argument given");
 		return EXIT_FAILURE;
 	}
 
+	const fs::path SourcePath(argv[1]);
+	const fs::path DestPath(argv[2]);
+	fs::create_directory(DestPath);
+
+	if( !fs::exists(SourcePath))
+	{
+		std::puts( "Invalid source/dest paths" );
+		return EXIT_FAILURE;
+	}
+
+	for( const auto& CurEntry : fs::recursive_directory_iterator( SourcePath ) )
+	{
+		if( fs::is_regular_file( CurEntry ) )
+		{
+			const fs::path CurSource = CurEntry.path();
+			const fs::path CurDest = DestPath / CurEntry.path();
+			fs::create_directories(CurDest.parent_path());
+
+			try
+			{
+				fs::create_symlink(
+					fs::absolute(CurSource),
+					CurDest
+				);
+			}
+			catch( fs::filesystem_error& e)
+			{
+			}
+
+			if( CurSource.extension() == ".m2h" )
+			{
+				const fs::path CurExpansion = CurDest.parent_path() / CurDest.stem();
+				std::cout << CurSource << std::endl;
+				std::cout << CurExpansion << std::endl;
+
+				// Process .m2h
+				fs::create_directory(CurExpansion);
+				ProcessFile( CurSource, CurExpansion );
+			}
+			else if( CurSource.extension() == ".m2d" )
+			{
+				// Ignore .m2d
+			}
+			else
+			{
+				// Copy
+				/*
+				   fs::copy_file(
+				   CurSource,
+				   CurDest,
+				   fs::copy_options::update_existing
+				   );
+				 */
+				// Create symlinks to avoid a file copy for now
+
+			}
+		}
+	}
+
 	for( std::size_t i = 1; i < static_cast<std::size_t>(argc); ++i )
 	{
-		ProcessFile(argv[i]);
+		//ProcessFile(argv[i]);
 	}
 
 	return EXIT_SUCCESS;
 }
 
-bool ProcessFile( const std::string& HeaderPath )
+bool ProcessFile( const fs::path& HeaderPath, fs::path DestPath)
 {
 	std::ifstream FileIn;
 	FileIn.open(
@@ -68,10 +127,6 @@ bool ProcessFile( const std::string& HeaderPath )
 	std::uint32_t Magic = 0;
 	Magic = Util::Read<std::uint32_t>( FileIn );
 
-	std::printf(
-		"%x\n",
-		Maple2::Magic::NS2F
-	);
 	switch( static_cast<Maple2::Magic>( Magic ) )
 	{
 	case Maple2::Magic::MS2F:
@@ -125,11 +180,13 @@ bool ProcessFile( const std::string& HeaderPath )
 		CurHeader.FileListEncodedSize
 	);
 
+	/*
 	HexDump(
 		"FileList Cipher",
 		FileList.data(),
 		std::min<std::size_t>( FileList.size(), 256 )
 	);
+	*/
 
 	std::string DecryptedFL;
 
@@ -139,6 +196,7 @@ bool ProcessFile( const std::string& HeaderPath )
 		32,
 		Maple2::MS2F_IV_LUT[CurHeader.FileListCompressedSize % 128]
 	);
+
 	CryptoPP::StringSource(
 		FileList,
 		true,
@@ -151,6 +209,7 @@ bool ProcessFile( const std::string& HeaderPath )
 			)
 		)
 	);
+
 	FileList = DecryptedFL;
 
 	HexDump(
@@ -169,14 +228,16 @@ bool ProcessFile( const std::string& HeaderPath )
 		for( ;TokenIter != TokenEnd; ++TokenIter )
 		{
 			const std::string CurFileLine = (*TokenIter).str();
-			
-			const std::string FileIndex = CurFileLine.substr( 0, CurFileLine.find_first_of(',') );
-			const std::string FileName = CurFileLine.substr( CurFileLine.find_last_of(',') + 1 );
-			std::printf(
-				"%s:\t%s\n",
-				FileIndex.c_str(),
-				FileName.c_str()
-			);
+
+			const fs::path FileIndex = CurFileLine.substr( 0, CurFileLine.find_first_of(',') );
+			const fs::path FileName = CurFileLine.substr( CurFileLine.find_last_of(',') + 1 );
+			/*
+			   std::printf(
+			   "%s:\t%s\n",
+			   FileIndex.c_str(),
+			   FileName.c_str()
+			   );
+			 */
 			FileListEntries[ std::stoull(FileIndex) ] = FileName;
 		}
 	}
@@ -190,11 +251,13 @@ bool ProcessFile( const std::string& HeaderPath )
 		CurHeader.FATEncodedSize
 	);
 
+	/*
 	HexDump(
 		"FAT Cipher",
 		FileAllocationTable.data(),
 		std::min<std::size_t>( FileAllocationTable.size(), 256 )
 	);
+	*/
 
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DecryptorTOC;
 	DecryptorTOC.SetKeyWithIV(
@@ -225,11 +288,13 @@ bool ProcessFile( const std::string& HeaderPath )
 		DecryptedTOC.size()
 	);
 
+	/*
 	HexDump(
 		"File Allocation Table",
 		FATable.data(),
 		std::min<std::size_t>( FATable.size() * sizeof(Maple2::FATEntry), 256)
 	);
+	*/
 
 	// for( std::size_t i = 0; i < FATable.size() % 256; ++i )
 	// {
@@ -249,10 +314,7 @@ bool ProcessFile( const std::string& HeaderPath )
 
 	////////////////////////////////////////////////////////////////////////////
 	// Process data file
-	const std::string DataPath = HeaderPath.substr(
-		0,
-		HeaderPath.find_last_of('.')
-	) + ".m2d";
+	const fs::path DataPath = fs::path(HeaderPath).replace_extension(".m2d");
 
 	std::printf(
 		"Processing data file: %s\n",
@@ -277,6 +339,7 @@ bool ProcessFile( const std::string& HeaderPath )
 
 	for( std::size_t i = 0; i < FATable.size(); ++i )
 	{
+		/*
 		std::printf(
 			"FileName: %s\n"
 			"FileIndex: %u\n"
@@ -291,21 +354,22 @@ bool ProcessFile( const std::string& HeaderPath )
 			FATable[i].CompressedSize,
 			FATable[i].Size
 		);
+		*/
 
-		DataFile.seekg( FATable[i].Offset );
 		std::string EncodedData;
-		EncodedData.resize(FATable[i].EncodedSize);
+		EncodedData.resize( FATable[i].EncodedSize );
+		DataFile.seekg( FATable[i].Offset );
 		DataFile.read(
 			EncodedData.data(),
 			FATable[i].EncodedSize
 		);
 
+		/*
 		std::printf(
 			"Data Stream: %.128s...\n",
 			EncodedData.c_str()
 		);
-
-		std::puts("Decrypting");
+		*/
 
 		CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DataDecryptor;
 		DataDecryptor.SetKeyWithIV(
@@ -345,19 +409,22 @@ bool ProcessFile( const std::string& HeaderPath )
 			);
 		}
 
-		HexDump(
-			"PlaintextData: " ,
-			PlaintextData.data(),
-			std::min<std::size_t>( PlaintextData.size(), 256 )
-		);
+		/*
+		   HexDump(
+		   "PlaintextData: " ,
+		   PlaintextData.data(),
+		   std::min<std::size_t>( PlaintextData.size(), 256 )
+		   );
+		 */
 
 		fs::create_directories(
-			"Dump" / fs::path( FileListEntries[ i + 1 ] ).parent_path()
+			DestPath / fs::path( FileListEntries[ i + 1 ] ).parent_path()
 		);
 
+		std::puts( (DestPath / fs::path( FileListEntries[ i + 1 ] )).c_str() );
 		std::ofstream DumpFile;
 		DumpFile.open(
-			"Dump" / fs::path( FileListEntries[ i + 1 ] ),
+			DestPath / fs::path( FileListEntries[ i + 1 ] ),
 			std::ios::binary
 		);
 
