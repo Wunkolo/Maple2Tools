@@ -123,10 +123,15 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	std::uint32_t Magic = 0;
 	Magic = Util::Read<std::uint32_t>( FileIn );
 
+	const std::uint8_t (*CurKeys)[128][32] = nullptr;
+	const std::uint8_t (*CurIVs)[128][16] = nullptr;
+
 	switch( static_cast<Maple2::Magic>( Magic ) )
 	{
 	case Maple2::Magic::MS2F:
 	{
+		CurKeys = &Maple2::MS2F_Key_LUT;
+		CurIVs = &Maple2::MS2F_IV_LUT;
 		break;
 	}
 	case Maple2::Magic::NS2F:
@@ -186,8 +191,8 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 
 	FileList = DecryptStream(
 		FileList,
-		Maple2::MS2F_Key_LUT[CurHeader.FileListCompressedSize % 128],
-		Maple2::MS2F_IV_LUT[CurHeader.FileListCompressedSize % 128],
+		(*CurKeys)[CurHeader.FileListCompressedSize % 128],
+		(*CurIVs)[CurHeader.FileListCompressedSize % 128],
 		CurHeader.FileListSize != CurHeader.FileListCompressedSize
 	);
 
@@ -241,8 +246,8 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 
 	FileAllocationTable = DecryptStream(
 		FileAllocationTable,
-		Maple2::MS2F_Key_LUT[CurHeader.FATCompressedSize % 128],
-		Maple2::MS2F_IV_LUT[CurHeader.FATCompressedSize % 128],
+		(*CurKeys)[CurHeader.FATCompressedSize % 128],
+		(*CurIVs)[CurHeader.FATCompressedSize % 128],
 		CurHeader.FATSize != CurHeader.FATCompressedSize
 	);
 
@@ -325,8 +330,8 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 
 		FileData = DecryptStream(
 			FileData,
-			Maple2::MS2F_Key_LUT[FATable[i].CompressedSize % 128],
-			Maple2::MS2F_IV_LUT[FATable[i].CompressedSize % 128],
+			(*CurKeys)[FATable[i].CompressedSize % 128],
+			(*CurIVs)[FATable[i].CompressedSize % 128],
 			FATable[i].Size != FATable[i].CompressedSize
 		);
 
