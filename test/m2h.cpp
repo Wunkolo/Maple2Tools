@@ -166,7 +166,7 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	std::string FileList;
 	FileList.resize(CurHeader.FileListEncodedSize);
 	FileIn.read(
-		&FileList[0],
+		FileList.data(),
 		CurHeader.FileListEncodedSize
 	);
 
@@ -237,7 +237,7 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	std::string FileAllocationTable;
 	FileAllocationTable.resize(CurHeader.FATEncodedSize);
 	FileIn.read(
-		&FileAllocationTable[0],
+		FileAllocationTable.data(),
 		CurHeader.FATEncodedSize
 	);
 
