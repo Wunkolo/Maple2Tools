@@ -24,9 +24,16 @@ namespace fs = std::experimental::filesystem;
 #include <cryptopp/filters.h>
 #include <cryptopp/zlib.h>
 
-void HexDump( const char* Desription, const void* Data, std::size_t Size);
+std::string DecryptStream(
+	const std::string& Encoded,
+	const std::uint8_t Key[32],
+	const std::uint8_t IV[16],
+	bool Compressed = false
+);
 
-bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath);
+bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath );
+
+void HexDump( const char* Desription, const void* Data, std::size_t Size );
 
 int main( int argc, char* argv[] )
 {
@@ -92,7 +99,6 @@ int main( int argc, char* argv[] )
 	{
 		CurTasks.wait();
 	}
-
 	return EXIT_SUCCESS;
 }
 
@@ -171,36 +177,19 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	);
 
 	/*
-	HexDump(
-		"FileList Cipher",
-		FileList.data(),
-		std::min<std::size_t>( FileList.size(), 256 )
-	);
-	*/
+	   HexDump(
+	   "FileList Cipher",
+	   FileList.data(),
+	   std::min<std::size_t>( FileList.size(), 256 )
+	   );
+	 */
 
-	std::string DecryptedFL;
-
-	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DecryptorFL;
-	DecryptorFL.SetKeyWithIV(
-		Maple2::MS2F_Key_LUT[CurHeader.FileListCompressedSize % 128],
-		32,
-		Maple2::MS2F_IV_LUT[CurHeader.FileListCompressedSize % 128]
-	);
-
-	CryptoPP::StringSource(
+	FileList = DecryptStream(
 		FileList,
-		true,
-		new CryptoPP::Base64Decoder(
-			new CryptoPP::StreamTransformationFilter(
-				DecryptorFL,
-				new CryptoPP::ZlibDecompressor(
-					new CryptoPP::StringSink(DecryptedFL)
-				)
-			)
-		)
+		Maple2::MS2F_Key_LUT[CurHeader.FileListCompressedSize % 128],
+		Maple2::MS2F_IV_LUT[CurHeader.FileListCompressedSize % 128],
+		CurHeader.FileListSize != CurHeader.FileListCompressedSize
 	);
-
-	FileList = DecryptedFL;
 
 	HexDump(
 		"File List",
@@ -234,6 +223,7 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
+	std::puts("Reading FAT Table");
 	std::string FileAllocationTable;
 	FileAllocationTable.resize(CurHeader.FATEncodedSize);
 	FileIn.read(
@@ -241,66 +231,37 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 		CurHeader.FATEncodedSize
 	);
 
-	/*
+
 	HexDump(
 		"FAT Cipher",
 		FileAllocationTable.data(),
 		std::min<std::size_t>( FileAllocationTable.size(), 256 )
 	);
-	*/
 
-	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DecryptorTOC;
-	DecryptorTOC.SetKeyWithIV(
-		Maple2::MS2F_Key_LUT[CurHeader.FATCompressedSize % 128],
-		32,
-		Maple2::MS2F_IV_LUT[CurHeader.FATCompressedSize % 128]
-	);
 
-	std::string DecryptedTOC;
-	CryptoPP::StringSource(
+	FileAllocationTable = DecryptStream(
 		FileAllocationTable,
-		true,
-		new CryptoPP::Base64Decoder(
-			new CryptoPP::StreamTransformationFilter(
-				DecryptorTOC,
-				new CryptoPP::ZlibDecompressor(
-					new CryptoPP::StringSink(DecryptedTOC)
-				)
-			)
-		)
+		Maple2::MS2F_Key_LUT[CurHeader.FATCompressedSize % 128],
+		Maple2::MS2F_IV_LUT[CurHeader.FATCompressedSize % 128],
+		CurHeader.FATSize != CurHeader.FATCompressedSize
 	);
 
 	std::vector<Maple2::FATEntry> FATable;
 	FATable.resize(CurHeader.TotalFiles);
 	std::memcpy(
 		FATable.data(),
-		DecryptedTOC.data(),
-		DecryptedTOC.size()
+		FileAllocationTable.data(),
+		FileAllocationTable.size()
 	);
 
-	/*
-	HexDump(
-		"File Allocation Table",
-		FATable.data(),
-		std::min<std::size_t>( FATable.size() * sizeof(Maple2::FATEntry), 256)
+	
+	 HexDump(
+	   "File Allocation Table",
+	   FATable.data(),
+	   std::min<std::size_t>( FATable.size() * sizeof(Maple2::FATEntry), 256)
 	);
-	*/
+	
 
-	// for( std::size_t i = 0; i < FATable.size() % 256; ++i )
-	// {
-	// 	std::printf(
-	// 		"FileIndex: %u\n"
-	// 		"Offset: %zu\n"
-	// 		"EncodedSize: %zu\n"
-	// 		"CompressedSize: %zu\n"
-	// 		"Size: %zu\n",
-	// 		FATable[i].FileIndex,
-	// 		FATable[i].Offset,
-	// 		FATable[i].EncodedSize,
-	// 		FATable[i].CompressedSize,
-	// 		FATable[i].Size
-	// 	);
-	// }
 
 	////////////////////////////////////////////////////////////////////////////
 	// Process data file
@@ -330,74 +291,44 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	for( std::size_t i = 0; i < FATable.size(); ++i )
 	{
 		/*
-		std::printf(
-			"FileName: %s\n"
-			"FileIndex: %u\n"
-			"Offset: %zu\n"
-			"EncodedSize: %zu\n"
-			"CompressedSize: %zu\n"
-			"Size: %zu\n",
-			FileListEntries[i + 1].c_str(),
-			FATable[i].FileIndex,
-			FATable[i].Offset,
-			FATable[i].EncodedSize,
-			FATable[i].CompressedSize,
-			FATable[i].Size
-		);
-		*/
+		   std::printf(
+		   "FileName: %s\n"
+		   "FileIndex: %u\n"
+		   "Offset: %zu\n"
+		   "EncodedSize: %zu\n"
+		   "CompressedSize: %zu\n"
+		   "Size: %zu\n",
+		   FileListEntries[i + 1].c_str(),
+		   FATable[i].FileIndex,
+		   FATable[i].Offset,
+		   FATable[i].EncodedSize,
+		   FATable[i].CompressedSize,
+		   FATable[i].Size
+		   );
+		 */
 
-		std::string EncodedData;
-		EncodedData.resize( FATable[i].EncodedSize );
+		std::string FileData;
+		FileData.resize( FATable[i].EncodedSize );
 		DataFile.seekg( FATable[i].Offset );
 		DataFile.read(
-			EncodedData.data(),
+			FileData.data(),
 			FATable[i].EncodedSize
 		);
 
 		/*
-		std::printf(
-			"Data Stream: %.128s...\n",
-			EncodedData.c_str()
-		);
-		*/
+		   std::printf(
+		   "Data Stream: %.128s...\n",
+		   EncodedData.c_str()
+		   );
+		 */
 
-		CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption DataDecryptor;
-		DataDecryptor.SetKeyWithIV(
+
+		FileData = DecryptStream(
+			FileData,
 			Maple2::MS2F_Key_LUT[FATable[i].CompressedSize % 128],
-			32,
-			Maple2::MS2F_IV_LUT[FATable[i].CompressedSize % 128]
+			Maple2::MS2F_IV_LUT[FATable[i].CompressedSize % 128],
+			FATable[i].Size != FATable[i].CompressedSize
 		);
-
-		std::string PlaintextData;
-
-		if( FATable[i].Size != FATable[i].CompressedSize  ) // decompression
-		{
-			CryptoPP::StringSource(
-				EncodedData,
-				true,
-				new CryptoPP::Base64Decoder(
-					new CryptoPP::StreamTransformationFilter(
-						DataDecryptor,
-						new CryptoPP::ZlibDecompressor(
-							new CryptoPP::StringSink(PlaintextData)
-						)
-					)
-				)
-			);
-		}
-		else // no decompression
-		{
-			CryptoPP::StringSource(
-				EncodedData,
-				true,
-				new CryptoPP::Base64Decoder(
-					new CryptoPP::StreamTransformationFilter(
-						DataDecryptor,
-						new CryptoPP::StringSink(PlaintextData)
-					)
-				)
-			);
-		}
 
 		/*
 		   HexDump(
@@ -419,14 +350,59 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 		);
 
 		DumpFile.write(
-			PlaintextData.data(),
-			PlaintextData.size()
+			FileData.data(),
+			FileData.size()
 		);
 
 		DumpFile.close();
 	}
 
 	return true;
+}
+
+std::string DecryptStream(
+	const std::string& Encoded,
+	const std::uint8_t Key[32],
+	const std::uint8_t IV[16],
+	bool Compressed
+)
+{
+
+	std::string Decrypted;
+
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
+	Decryptor.SetKeyWithIV( Key, 32, IV	);
+
+	if( Compressed )
+	{
+		CryptoPP::StringSource(
+			Encoded,
+			true,
+			new CryptoPP::Base64Decoder(
+				new CryptoPP::StreamTransformationFilter(
+					Decryptor,
+					new CryptoPP::ZlibDecompressor(
+						new CryptoPP::StringSink(Decrypted)
+					)
+				)
+			)
+		);
+	}
+	else
+	{
+		CryptoPP::StringSource(
+			Encoded,
+			true,
+			new CryptoPP::Base64Decoder(
+				new CryptoPP::StreamTransformationFilter(
+					Decryptor,
+					new CryptoPP::StringSink(Decrypted)
+				)
+			)
+		);
+	}
+
+	return Decrypted;
 }
 
 void HexDump( const char* Description, const void* Data, std::size_t Size )
