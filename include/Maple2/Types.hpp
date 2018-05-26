@@ -32,7 +32,7 @@ static_assert(
 struct PackStreamVer2 // NS2F
 {
 public:
-	std::uint32_t TotalFiles;
+	std::uint32_t TotalFiles;             // Total Files
 
 	std::uint64_t FATCompressedSize;      // DEFLATE length
 	std::uint64_t FATEncodedSize;         // Base64 length
@@ -47,11 +47,19 @@ static_assert(
 	"sizeof(PackStreamVer2) != 0x34"
 );
 
-union PackStreamVer3 // OS2F/PS2F
+struct PackStreamVer3 // OS2F/PS2F
 {
-private:
-	// Todo
-	Util::Padding<0x38> Pad;
+	std::uint32_t TotalFiles;             // Total Files
+	std::uint32_t Pad;                    // Always Zero
+
+	std::uint64_t FATCompressedSize;      // DEFLATE length
+	std::uint64_t FATEncodedSize;         // Base64 length
+
+	std::uint64_t FileListCompressedSize; // DEFLATE length
+	std::uint64_t FileListEncodedSize;    // Base64 length
+	std::uint64_t FileListSize;           // Uncompressed size
+
+	std::uint64_t FATSize;                // Uncompressed size
 };
 static_assert(
 	sizeof(PackStreamVer3) == 0x38,
