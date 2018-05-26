@@ -26,8 +26,8 @@ namespace fs = std::experimental::filesystem;
 
 std::string DecryptStream(
 	const std::string& Encoded,
-	const std::uint8_t Key[32],
 	const std::uint8_t IV[16],
+	const std::uint8_t Key[32],
 	bool Compressed = false
 );
 
@@ -39,7 +39,7 @@ int main( int argc, char* argv[] )
 {
 	std::puts(
 		"Maplestory2 PackFile tool:\n"
-		"Build Date" __TIMESTAMP__ "\n"
+		"Build Date: " __TIMESTAMP__ "\n"
 		"\t- wunkolo <wunkolo@gmail.com>"
 	);
 	if( argc < 3 )
@@ -83,8 +83,8 @@ int main( int argc, char* argv[] )
 			if( CurSource.extension() == ".m2h" )
 			{
 				const fs::path CurExpansion = CurDest.parent_path() / CurDest.stem();
-				std::cout << CurSource << std::endl;
-				std::cout << CurExpansion << std::endl;
+				// std::cout << CurSource << std::endl;
+				// std::cout << CurExpansion << std::endl;
 
 				// Process .m2h into new folder of the same name
 				fs::create_directory(CurExpansion);
@@ -97,20 +97,21 @@ int main( int argc, char* argv[] )
 
 	for( auto& CurTasks : Tasks )
 	{
-		CurTasks.wait();
+		CurTasks.get();
 	}
 	return EXIT_SUCCESS;
 }
 
-bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
+template< typename PackTraits >
+bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 {
-	std::ifstream FileIn;
-	FileIn.open(
+	std::ifstream HeaderFile;
+	HeaderFile.open(
 		HeaderPath,
 		std::ios::binary
 	);
 
-	if( !FileIn.good() )
+	if( !HeaderFile.good() )
 	{
 		// Error opening file
 		std::printf(
@@ -120,34 +121,16 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 		return false;
 	}
 
-	std::uint32_t Magic = 0;
-	Magic = Util::Read<std::uint32_t>( FileIn );
-
-	const std::uint8_t (*CurKeys)[128][32] = nullptr;
-	const std::uint8_t (*CurIVs)[128][16] = nullptr;
-
-	switch( static_cast<Maple2::Magic>( Magic ) )
+	Maple2::Magic Identifier;
+	Identifier = Util::Read<Maple2::Magic>( HeaderFile );
+	if( Identifier != PackTraits::Identifier )
 	{
-	case Maple2::Magic::MS2F:
-	{
-		CurKeys = &Maple2::MS2F_Key_LUT;
-		CurIVs = &Maple2::MS2F_IV_LUT;
-		break;
-	}
-	case Maple2::Magic::NS2F:
-	case Maple2::Magic::OS2F:
-	case Maple2::Magic::PS2F:
-	{
-		std::puts(
-			"Not implemented"
-		);
+		// Invalid magic
 		return false;
-		break;
-	}
 	}
 
-	Maple2::PackFileHeaderVer1 CurHeader = {};
-	CurHeader = Util::Read<Maple2::PackFileHeaderVer1>(FileIn);
+   	typename PackTraits::StreamType StreamHeader = {};
+	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
 
 	std::printf(
 		"File: %s\n"
@@ -157,72 +140,85 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 		"FileListSize: %zx ( %zu )\n"
 		"FileListCompressedSize: %zx ( %zu )\n"
 		"FileListEncodedSize: %zx ( %zu )\n"
-		"TotalFiles: %zx ( %zu )\n"
+		"TotalFiles: %x ( %u )\n"
 		"FATSize: %zx ( %zu )\n"
-		"\n"
-		,
+		"\n",
 		HeaderPath.c_str(),
-		Magic, reinterpret_cast<const char*>(&Magic),
-		CurHeader.FATCompressedSize, CurHeader.FATCompressedSize,
-		CurHeader.FATEncodedSize, CurHeader.FATEncodedSize,
-		CurHeader.FileListSize, CurHeader.FileListSize,
-		CurHeader.FileListCompressedSize, CurHeader.FileListCompressedSize,
-		CurHeader.FileListEncodedSize, CurHeader.FileListEncodedSize,
-		CurHeader.TotalFiles, CurHeader.TotalFiles,
-		CurHeader.FATSize, CurHeader.FATSize
+		static_cast<std::uint32_t>(Identifier), reinterpret_cast<const char*>(&Identifier),
+		StreamHeader.FATCompressedSize, StreamHeader.FATCompressedSize,
+		StreamHeader.FATEncodedSize, StreamHeader.FATEncodedSize,
+		StreamHeader.FileListSize, StreamHeader.FileListSize,
+		StreamHeader.FileListCompressedSize, StreamHeader.FileListCompressedSize,
+		StreamHeader.FileListEncodedSize, StreamHeader.FileListEncodedSize,
+		StreamHeader.TotalFiles, StreamHeader.TotalFiles,
+		StreamHeader.FATSize, StreamHeader.FATSize
 	);
 
 	////////////////////////////////////////////////////////////////////////////
 	// FileList
 	std::string FileList;
-	FileList.resize(CurHeader.FileListEncodedSize);
-	FileIn.read(
+	FileList.resize( StreamHeader.FileListEncodedSize );
+	HeaderFile.seekg(
+		4 + sizeof(typename PackTraits::StreamType),
+		std::ios::beg
+	);
+	HeaderFile.read(
 		FileList.data(),
-		CurHeader.FileListEncodedSize
+		StreamHeader.FileListEncodedSize
 	);
 
-	/*
-	   HexDump(
-	   "FileList Cipher",
-	   FileList.data(),
-	   std::min<std::size_t>( FileList.size(), 256 )
-	   );
-	 */
+	// HexDump(
+	// 	"FileList Cipher",
+	// 	FileList.data(),
+	// 	std::min<std::size_t>( FileList.size(), 256 )
+	// );
 
 	FileList = DecryptStream(
 		FileList,
-		(*CurKeys)[CurHeader.FileListCompressedSize % 128],
-		(*CurIVs)[CurHeader.FileListCompressedSize % 128],
-		CurHeader.FileListSize != CurHeader.FileListCompressedSize
+		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % 128],
+		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % 128],
+		StreamHeader.FileListSize != StreamHeader.FileListCompressedSize
 	);
 
-	HexDump(
-		"File List",
-		FileList.c_str(),
-		std::min<std::size_t>( FileList.size(), 256 )
-	);
+	// HexDump(
+	// 	"File List",
+	// 	FileList.c_str(),
+	// 	std::min<std::size_t>( FileList.size(), 256 )
+	// );
 
+	// Generate list of File list entries
 	std::map<std::size_t, std::string> FileListEntries;
 	{
 		// Split based on \r\n
-		std::regex RegExNewline("[\r\n]+");
-		std::sregex_token_iterator TokenIter(FileList.begin(),FileList.end(),RegExNewline,-1);
+		static const std::regex RegExNewline("[\r\n]+");
+
+		std::sregex_token_iterator TokenIter(
+			FileList.begin(),
+			FileList.end(),
+			RegExNewline,
+			-1
+		);
+
 		std::sregex_token_iterator TokenEnd;
 
 		for( ;TokenIter != TokenEnd; ++TokenIter )
 		{
 			const std::string CurFileLine = (*TokenIter).str();
+			const fs::path HeaderFiledex = CurFileLine.substr(
+				0,
+				CurFileLine.find_first_of(',')
+			);
+			const fs::path FileName = CurFileLine.substr(
+				CurFileLine.find_last_of(',') + 1
+			);
 
-			const fs::path FileIndex = CurFileLine.substr( 0, CurFileLine.find_first_of(',') );
-			const fs::path FileName = CurFileLine.substr( CurFileLine.find_last_of(',') + 1 );
-			/*
-			   std::printf(
-			   "%s:\t%s\n",
-			   FileIndex.c_str(),
-			   FileName.c_str()
-			   );
-			 */
-			FileListEntries[ std::stoull(FileIndex) ] = FileName;
+			// std::printf(
+			// 	"%s:\t%s\n",
+			// 	HeaderFiledex.c_str(),
+			// 	FileName.c_str()
+			// );
+
+			FileListEntries[ std::stoull(HeaderFiledex) ] = FileName;
 		}
 	}
 
@@ -230,43 +226,43 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	// File allocation Table
 	std::puts("Reading FAT Table");
 	std::string FileAllocationTable;
-	FileAllocationTable.resize(CurHeader.FATEncodedSize);
-	FileIn.read(
+	FileAllocationTable.resize(StreamHeader.FATEncodedSize);
+	HeaderFile.read(
 		FileAllocationTable.data(),
-		CurHeader.FATEncodedSize
+		StreamHeader.FATEncodedSize
 	);
 
-
-	HexDump(
-		"FAT Cipher",
-		FileAllocationTable.data(),
-		std::min<std::size_t>( FileAllocationTable.size(), 256 )
-	);
-
+	// HexDump(
+	// 	"FAT Cipher",
+	// 	FileAllocationTable.data(),
+	// 	std::min<std::size_t>( FileAllocationTable.size(), 256 )
+	// );
 
 	FileAllocationTable = DecryptStream(
 		FileAllocationTable,
-		(*CurKeys)[CurHeader.FATCompressedSize % 128],
-		(*CurIVs)[CurHeader.FATCompressedSize % 128],
-		CurHeader.FATSize != CurHeader.FATCompressedSize
+		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
+		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
+		StreamHeader.FATSize != StreamHeader.FATCompressedSize
 	);
 
-	std::vector<Maple2::FATEntry> FATable;
-	FATable.resize(CurHeader.TotalFiles);
+	std::vector<typename PackTraits::FileHeaderType> FATable;
+	FATable.resize(StreamHeader.TotalFiles);
 	std::memcpy(
 		FATable.data(),
 		FileAllocationTable.data(),
 		FileAllocationTable.size()
 	);
 
-	
-	 HexDump(
-	   "File Allocation Table",
-	   FATable.data(),
-	   std::min<std::size_t>( FATable.size() * sizeof(Maple2::FATEntry), 256)
-	);
-	
+	// HexDump(
+	// 	"File Allocation Table",
+	// 	FATable.data(),
+	// 	std::min<std::size_t>(
+	// 		FATable.size() * sizeof(typename PackTraits::FileHeaderType),
+	// 		256
+	// 	)
+	// );
 
+	HeaderFile.close();
 
 	////////////////////////////////////////////////////////////////////////////
 	// Process data file
@@ -295,22 +291,20 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 
 	for( std::size_t i = 0; i < FATable.size(); ++i )
 	{
-		/*
-		   std::printf(
-		   "FileName: %s\n"
-		   "FileIndex: %u\n"
-		   "Offset: %zu\n"
-		   "EncodedSize: %zu\n"
-		   "CompressedSize: %zu\n"
-		   "Size: %zu\n",
-		   FileListEntries[i + 1].c_str(),
-		   FATable[i].FileIndex,
-		   FATable[i].Offset,
-		   FATable[i].EncodedSize,
-		   FATable[i].CompressedSize,
-		   FATable[i].Size
-		   );
-		 */
+		// std::printf(
+		// 	"FileName: %s\n"
+		// 	"FileIndex: %u\n"
+		// 	"Offset: %zu\n"
+		// 	"EncodedSize: %u\n"
+		// 	"CompressedSize: %zu\n"
+		// 	"Size: %zu\n",
+		// 	FileListEntries[i + 1].c_str(),
+		// 	FATable[i].FileIndex,
+		// 	FATable[i].Offset,
+		// 	FATable[i].EncodedSize,
+		// 	FATable[i].CompressedSize,
+		// 	FATable[i].Size
+		// );
 
 		std::string FileData;
 		FileData.resize( FATable[i].EncodedSize );
@@ -320,28 +314,23 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 			FATable[i].EncodedSize
 		);
 
-		/*
-		   std::printf(
-		   "Data Stream: %.128s...\n",
-		   EncodedData.c_str()
-		   );
-		 */
-
+		// std::printf(
+		// 	"Data Stream: %.128s...\n",
+		// 	FileData.c_str()
+		// );
 
 		FileData = DecryptStream(
 			FileData,
-			(*CurKeys)[FATable[i].CompressedSize % 128],
-			(*CurIVs)[FATable[i].CompressedSize % 128],
+			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
+			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
 			FATable[i].Size != FATable[i].CompressedSize
 		);
 
-		/*
-		   HexDump(
-		   "PlaintextData: " ,
-		   PlaintextData.data(),
-		   std::min<std::size_t>( PlaintextData.size(), 256 )
-		   );
-		 */
+		// HexDump(
+		// 	"PlaintextData: " ,
+		// 	FileData.data(),
+		// 	std::min<std::size_t>( FileData.size(), 256 )
+		// );
 
 		fs::create_directories(
 			DestPath / fs::path( FileListEntries[ i + 1 ] ).parent_path()
@@ -365,10 +354,65 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath)
 	return true;
 }
 
+bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath )
+{
+	std::ifstream FileIn;
+	FileIn.open(
+		HeaderPath,
+		std::ios::binary
+	);
+
+	if( !FileIn.good() )
+	{
+		// Error opening file
+		std::printf(
+			"Error opening file for reading: %s\n",
+			HeaderPath.c_str()
+		);
+		return false;
+	}
+
+	Maple2::Magic Identifier;
+	Identifier = Util::Read<Maple2::Magic>( FileIn );
+	FileIn.close();
+
+	switch( Identifier )
+	{
+	case Maple2::Magic::MS2F:
+	{
+		return DumpPackStream<Maple2::MS2FTraits>(
+			HeaderPath, DestPath
+		);
+	}
+	case Maple2::Magic::NS2F:
+	{
+		return DumpPackStream<Maple2::NS2FTraits>(
+			HeaderPath, DestPath
+		);
+	}
+	/*
+	   case Maple2::Magic::OS2F:
+	   {
+	   return DumpPackStream<Maple2::OS2FTraits>(
+	   HeaderPath, DestPath
+	   );
+	   }
+	   case Maple2::Magic::PS2F:
+	   {
+	   return DumpPackStream<Maple2::PS2FTraits>(
+	   HeaderPath, DestPath
+	   );
+	   }
+	 */
+	}
+
+	return true;
+}
+
 std::string DecryptStream(
 	const std::string& Encoded,
-	const std::uint8_t Key[32],
 	const std::uint8_t IV[16],
+	const std::uint8_t Key[32],
 	bool Compressed
 )
 {
