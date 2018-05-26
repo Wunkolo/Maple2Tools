@@ -38,9 +38,12 @@ void HexDump( const char* Desription, const void* Data, std::size_t Size );
 int main( int argc, char* argv[] )
 {
 	std::puts(
-		"Maplestory2 PackFile tool:\n"
+		"MapleStory2 Filesystem expander:\n"
+		"\t\"Flattens\" a filesystem, expanding all m2h/m2d files it encounters\n"
+		"\tinto a folder of the same name\n"
 		"Build Date: " __TIMESTAMP__ "\n"
-		"\t- wunkolo <wunkolo@gmail.com>"
+		"\t- wunkolo <wunkolo@gmail.com>\n"
+		"Usage: Expand (Source) (Dest)\n"
 	);
 	if( argc < 3 )
 	{
