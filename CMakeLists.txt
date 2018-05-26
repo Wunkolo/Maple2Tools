@@ -42,12 +42,14 @@ add_library(
 )
 
 ## M2H Research
+
+# Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(
-	m2h
-	test/m2h.cpp
+	Expand
+	test/Expand.cpp
 )
 target_link_libraries(
-	m2h
+	Expand
 	PRIVATE
 	stdc++fs
 	Maple2
