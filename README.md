@@ -1,6 +1,6 @@
 # Maple2Tools [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Wunkolo/Maple2Tools/blob/master/LICENSE)
 
-Research and reverse engineering of Nexon's MapleStory 2
+Research and reverse engineering of Nexon's MapleStory 2. Check out the [XeNTaX](http://forum.xentax.com/viewtopic.php?f=10&t=18090) thread here.
 
 ## Dependencies
 
@@ -35,7 +35,9 @@ Research and reverse engineering of Nexon's MapleStory 2
 ### Expand
  Expand will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents). This effectively flattens out the entire runtime virtual file system(internally named `CFileSystem`) of MapleStory 2.
  The expander is very fast and multi-threaded and will create a new extraction thread for every `.m2h/.m2d` pair it encounters.
+
  `./Expand MapleFiles Dump`
+
  ```
 MapleStory2 Filesystem expander:
 	"Flattens" a filesystem, expanding all m2h/m2d files it encounters
