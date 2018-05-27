@@ -65,6 +65,7 @@ Dump/MapleFiles/appdata/Data/Resource/Model/Path/coupleaction_dummy_bowdown_diff
 Dump/MapleFiles/appdata/Data/Resource/Model/Path/coupleaction_dummy_bowdown_diff_ready.nif
 ...
 ```
+![](https://i.imgur.com/jPDkjOg.png)
 ```
 tree -d Dump | head -n 50
 Dump
