@@ -41,8 +41,6 @@ add_library(
 	source/Maple2/Keys.cpp
 )
 
-## M2H Research
-
 # Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(
 	Expand
@@ -51,8 +49,14 @@ add_executable(
 target_link_libraries(
 	Expand
 	PRIVATE
-	stdc++fs
 	Maple2
 	cryptopp
 	${CMAKE_THREAD_LIBS_INIT}
 )
+
+# Link filesystem lib
+if( CMAKE_COMPILER_IS_GNUCXX )
+	target_link_libraries(
+		stdc++fs
+	)
+endif()
