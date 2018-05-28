@@ -142,26 +142,26 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		"FileListSize: %zx ( %zu )\n"
 		"FileListCompressedSize: %zx ( %zu )\n"
 		"FileListEncodedSize: %zx ( %zu )\n"
-		"TotalFiles: %x ( %u )\n"
+		"TotalFiles: %zx ( %zu )\n"
 		"FATSize: %zx ( %zu )\n"
 		"\n",
 		HeaderPath.wstring().c_str(),
 		static_cast<std::uint32_t>(Identifier),
 		reinterpret_cast<const char*>(&Identifier),
-		StreamHeader.FATCompressedSize,
-		StreamHeader.FATCompressedSize,
-		StreamHeader.FATEncodedSize,
-		StreamHeader.FATEncodedSize,
-		StreamHeader.FileListSize,
-		StreamHeader.FileListSize,
-		StreamHeader.FileListCompressedSize,
-		StreamHeader.FileListCompressedSize,
-		StreamHeader.FileListEncodedSize,
-		StreamHeader.FileListEncodedSize,
-		StreamHeader.TotalFiles,
-		StreamHeader.TotalFiles,
-		StreamHeader.FATSize,
-		StreamHeader.FATSize
+		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
+		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
+		static_cast<std::size_t>(StreamHeader.FileListSize),
+		static_cast<std::size_t>(StreamHeader.FileListSize),
+		static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
+		static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
+		static_cast<std::size_t>(StreamHeader.TotalFiles),
+		static_cast<std::size_t>(StreamHeader.TotalFiles),
+		static_cast<std::size_t>(StreamHeader.FATSize),
+		static_cast<std::size_t>(StreamHeader.FATSize)
 	);
 
 	////////////////////////////////////////////////////////////////////////////
