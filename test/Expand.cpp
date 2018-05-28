@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 	{
 		if( fs::is_regular_file(CurEntry) )
 		{
-			const fs::path CurSource = CurEntry.path();
+			const fs::path& CurSource = CurEntry.path();
 			const fs::path CurDest = DestPath / CurEntry.path();
 			fs::create_directories(CurDest.parent_path());
 
