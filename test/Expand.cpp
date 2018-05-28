@@ -197,40 +197,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	// );
 
 	// Generate list of File list entries
-	std::map<std::size_t, fs::path> FileListEntries;
-	{
-		// Split based on \r\n
-		static const std::regex RegExNewline("[\r\n]+");
-
-		std::sregex_token_iterator TokenIter(
-			FileList.begin(),
-			FileList.end(),
-			RegExNewline,
-			-1
-		);
-
-		const std::sregex_token_iterator TokenEnd;
-
-		for( ; TokenIter != TokenEnd; ++TokenIter )
-		{
-			const std::string CurFileLine = (*TokenIter).str();
-			const fs::path HeaderFiledex = CurFileLine.substr(
-				0,
-				CurFileLine.find_first_of(',')
-			);
-			const fs::path FileName = CurFileLine.substr(
-				CurFileLine.find_last_of(',') + 1
-			);
-
-			// std::printf(
-			// 	"%s:\t%s\n",
-			// 	HeaderFiledex.c_str(),
-			// 	FileName.c_str()
-			// );
-
-			FileListEntries[std::stoull(HeaderFiledex)] = FileName;
-		}
-	}
+	const std::map<std::size_t, fs::path> FileListEntries = Maple2::Util::ParseFileList(FileList);
 
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
@@ -343,16 +310,18 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		// );
 
 		fs::create_directories(
-			DestPath / fs::path(FileListEntries[i + 1]).parent_path()
+			DestPath / FileListEntries.at(i + 1).parent_path()
 		);
 
 		std::printf(
 			"%ls\n",
-			(DestPath / fs::path(FileListEntries[i + 1])).wstring().c_str()
+			(
+				DestPath / fs::path(FileListEntries.at(i + 1))
+			).wstring().c_str()
 		);
 		std::ofstream DumpFile;
 		DumpFile.open(
-			DestPath / fs::path(FileListEntries[i + 1]),
+			DestPath / FileListEntries.at(i + 1),
 			std::ios::binary
 		);
 
