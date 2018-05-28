@@ -125,7 +125,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	}
 
 	const Maple2::Identifier Magic = Util::Read<Maple2::Identifier>(HeaderFile);
-	if( Magic != PackTraits::Identifier )
+	if( Magic != PackTraits::Magic )
 	{
 		// Invalid magic
 		return false;
