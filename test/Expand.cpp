@@ -209,7 +209,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 			-1
 		);
 
-		std::sregex_token_iterator TokenEnd;
+		const std::sregex_token_iterator TokenEnd;
 
 		for( ; TokenIter != TokenEnd; ++TokenIter )
 		{
