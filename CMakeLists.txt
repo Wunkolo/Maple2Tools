@@ -41,6 +41,11 @@ add_library(
 	source/Maple2/Keys.cpp
 	source/Maple2/Util.cpp
 )
+target_link_libraries(
+	Maple2
+	PRIVATE
+	cryptopp
+)
 
 ## M2H Research
 
@@ -53,7 +58,6 @@ target_link_libraries(
 	Expand
 	PRIVATE
 	Maple2
-	cryptopp
 	${CMAKE_THREAD_LIBS_INIT}
 )
 

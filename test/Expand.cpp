@@ -18,19 +18,6 @@ namespace fs = std::experimental::filesystem;
 #include <Maple2/Maple2.hpp>
 #include <Util/File.hpp>
 
-#include <cryptopp/aes.h>
-#include <cryptopp/base64.h>
-#include <cryptopp/modes.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/zlib.h>
-
-std::string DecryptStream(
-	const std::string& Encoded,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
-	bool Compressed = false
-);
-
 bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath);
 
 void HexDump(const char* Description, const void* Data, std::size_t Size);
@@ -183,7 +170,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	// 	std::min<std::size_t>( FileList.size(), 256 )
 	// );
 
-	FileList = DecryptStream(
+	FileList = Maple2::Util::DecryptStream(
 		FileList,
 		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % 128],
@@ -215,7 +202,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	// 	std::min<std::size_t>( FileAllocationTable.size(), 256 )
 	// );
 
-	FileAllocationTable = DecryptStream(
+	FileAllocationTable = Maple2::Util::DecryptStream(
 		FileAllocationTable,
 		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
@@ -296,7 +283,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		// 	FileData.c_str()
 		// );
 
-		FileData = DecryptStream(
+		FileData = Maple2::Util::DecryptStream(
 			FileData,
 			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
 			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
@@ -390,50 +377,6 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 	}
 
 	return true;
-}
-
-std::string DecryptStream(
-	const std::string& Encoded,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
-	bool Compressed
-)
-{
-	std::string Decrypted;
-
-	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
-	Decryptor.SetKeyWithIV(Key, 32, IV);
-
-	if( Compressed )
-	{
-		CryptoPP::StringSource(
-			Encoded,
-			true,
-			new CryptoPP::Base64Decoder(
-				new CryptoPP::StreamTransformationFilter(
-					Decryptor,
-					new CryptoPP::ZlibDecompressor(
-						new CryptoPP::StringSink(Decrypted)
-					)
-				)
-			)
-		);
-	}
-	else
-	{
-		CryptoPP::StringSource(
-			Encoded,
-			true,
-			new CryptoPP::Base64Decoder(
-				new CryptoPP::StreamTransformationFilter(
-					Decryptor,
-					new CryptoPP::StringSink(Decrypted)
-				)
-			)
-		);
-	}
-
-	return Decrypted;
 }
 
 void HexDump(const char* Description, const void* Data, std::size_t Size)
