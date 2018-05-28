@@ -31,11 +31,11 @@ std::string DecryptStream(
 	bool Compressed = false
 );
 
-bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath );
+bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath);
 
-void HexDump( const char* Desription, const void* Data, std::size_t Size );
+void HexDump(const char* Desription, const void* Data, std::size_t Size);
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
 	std::puts(
 		"MapleStory2 Filesystem expander:\n"
@@ -55,16 +55,16 @@ int main( int argc, char* argv[] )
 	const fs::path DestPath(argv[2]);
 	fs::create_directory(DestPath);
 
-	if( !fs::exists(SourcePath))
+	if( !fs::exists(SourcePath) )
 	{
-		std::puts( "Invalid source/dest paths" );
+		std::puts("Invalid source/dest paths");
 		return EXIT_FAILURE;
 	}
 
-	std::vector<std::future<bool>> Tasks;
-	for( const auto& CurEntry : fs::recursive_directory_iterator( SourcePath ) )
+	std::vector<std::future<bool> > Tasks;
+	for( const auto& CurEntry : fs::recursive_directory_iterator(SourcePath) )
 	{
-		if( fs::is_regular_file( CurEntry ) )
+		if( fs::is_regular_file(CurEntry) )
 		{
 			const fs::path CurSource = CurEntry.path();
 			const fs::path CurDest = DestPath / CurEntry.path();
@@ -78,7 +78,7 @@ int main( int argc, char* argv[] )
 					CurDest
 				);
 			}
-			catch( fs::filesystem_error& e)
+			catch( fs::filesystem_error& e )
 			{
 			}
 
@@ -92,7 +92,7 @@ int main( int argc, char* argv[] )
 				// Process .m2h into new folder of the same name
 				fs::create_directory(CurExpansion);
 				Tasks.emplace_back(
-					std::async(DumpPackFile,CurSource,CurExpansion)
+					std::async(DumpPackFile, CurSource, CurExpansion)
 				);
 			}
 		}
@@ -106,7 +106,7 @@ int main( int argc, char* argv[] )
 }
 
 template< typename PackTraits >
-bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
+bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 {
 	std::ifstream HeaderFile;
 	HeaderFile.open(
@@ -125,14 +125,14 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 	}
 
 	Maple2::Magic Identifier;
-	Identifier = Util::Read<Maple2::Magic>( HeaderFile );
+	Identifier = Util::Read<Maple2::Magic>(HeaderFile);
 	if( Identifier != PackTraits::Identifier )
 	{
 		// Invalid magic
 		return false;
 	}
 
-   	typename PackTraits::StreamType StreamHeader = {};
+	typename PackTraits::StreamType StreamHeader = {};
 	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
 
 	std::printf(
@@ -147,20 +147,28 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 		"FATSize: %zx ( %zu )\n"
 		"\n",
 		HeaderPath.c_str(),
-		static_cast<std::uint32_t>(Identifier), reinterpret_cast<const char*>(&Identifier),
-		StreamHeader.FATCompressedSize, StreamHeader.FATCompressedSize,
-		StreamHeader.FATEncodedSize, StreamHeader.FATEncodedSize,
-		StreamHeader.FileListSize, StreamHeader.FileListSize,
-		StreamHeader.FileListCompressedSize, StreamHeader.FileListCompressedSize,
-		StreamHeader.FileListEncodedSize, StreamHeader.FileListEncodedSize,
-		StreamHeader.TotalFiles, StreamHeader.TotalFiles,
-		StreamHeader.FATSize, StreamHeader.FATSize
+		static_cast<std::uint32_t>(Identifier),
+		reinterpret_cast<const char*>(&Identifier),
+		StreamHeader.FATCompressedSize,
+		StreamHeader.FATCompressedSize,
+		StreamHeader.FATEncodedSize,
+		StreamHeader.FATEncodedSize,
+		StreamHeader.FileListSize,
+		StreamHeader.FileListSize,
+		StreamHeader.FileListCompressedSize,
+		StreamHeader.FileListCompressedSize,
+		StreamHeader.FileListEncodedSize,
+		StreamHeader.FileListEncodedSize,
+		StreamHeader.TotalFiles,
+		StreamHeader.TotalFiles,
+		StreamHeader.FATSize,
+		StreamHeader.FATSize
 	);
 
 	////////////////////////////////////////////////////////////////////////////
 	// FileList
 	std::string FileList;
-	FileList.resize( StreamHeader.FileListEncodedSize );
+	FileList.resize(StreamHeader.FileListEncodedSize);
 	HeaderFile.seekg(
 		4 + sizeof(typename PackTraits::StreamType),
 		std::ios::beg
@@ -204,7 +212,7 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 
 		std::sregex_token_iterator TokenEnd;
 
-		for( ;TokenIter != TokenEnd; ++TokenIter )
+		for( ; TokenIter != TokenEnd; ++TokenIter )
 		{
 			const std::string CurFileLine = (*TokenIter).str();
 			const fs::path HeaderFiledex = CurFileLine.substr(
@@ -221,7 +229,7 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 			// 	FileName.c_str()
 			// );
 
-			FileListEntries[ std::stoull(HeaderFiledex) ] = FileName;
+			FileListEntries[std::stoull(HeaderFiledex)] = FileName;
 		}
 	}
 
@@ -310,8 +318,8 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 		// );
 
 		std::string FileData;
-		FileData.resize( FATable[i].EncodedSize );
-		DataFile.seekg( FATable[i].Offset );
+		FileData.resize(FATable[i].EncodedSize);
+		DataFile.seekg(FATable[i].Offset);
 		DataFile.read(
 			FileData.data(),
 			FATable[i].EncodedSize
@@ -336,13 +344,13 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 		// );
 
 		fs::create_directories(
-			DestPath / fs::path( FileListEntries[ i + 1 ] ).parent_path()
+			DestPath / fs::path(FileListEntries[i + 1]).parent_path()
 		);
 
-		std::puts( (DestPath / fs::path( FileListEntries[ i + 1 ] )).c_str() );
+		std::puts((DestPath / fs::path(FileListEntries[i + 1])).c_str());
 		std::ofstream DumpFile;
 		DumpFile.open(
-			DestPath / fs::path( FileListEntries[ i + 1 ] ),
+			DestPath / fs::path(FileListEntries[i + 1]),
 			std::ios::binary
 		);
 
@@ -357,7 +365,7 @@ bool DumpPackStream( const fs::path& HeaderPath, fs::path DestPath )
 	return true;
 }
 
-bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath )
+bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 {
 	std::ifstream FileIn;
 	FileIn.open(
@@ -376,7 +384,7 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath )
 	}
 
 	Maple2::Magic Identifier;
-	Identifier = Util::Read<Maple2::Magic>( FileIn );
+	Identifier = Util::Read<Maple2::Magic>(FileIn);
 	FileIn.close();
 
 	switch( Identifier )
@@ -384,29 +392,31 @@ bool DumpPackFile( const fs::path& HeaderPath, fs::path DestPath )
 	case Maple2::Magic::MS2F:
 	{
 		return DumpPackStream<Maple2::MS2FTraits>(
-			HeaderPath, DestPath
+			HeaderPath,
+			DestPath
 		);
 	}
 	case Maple2::Magic::NS2F:
 	{
 		return DumpPackStream<Maple2::NS2FTraits>(
-			HeaderPath, DestPath
+			HeaderPath,
+			DestPath
 		);
 	}
-	/*
-	   case Maple2::Magic::OS2F:
-	   {
-	   return DumpPackStream<Maple2::OS2FTraits>(
-	   HeaderPath, DestPath
-	   );
-	   }
-	   case Maple2::Magic::PS2F:
-	   {
-	   return DumpPackStream<Maple2::PS2FTraits>(
-	   HeaderPath, DestPath
-	   );
-	   }
-	 */
+		/*
+			case Maple2::Magic::OS2F:
+			{
+			return DumpPackStream<Maple2::OS2FTraits>(
+			HeaderPath, DestPath
+			);
+			}
+			case Maple2::Magic::PS2F:
+			{
+			return DumpPackStream<Maple2::PS2FTraits>(
+			HeaderPath, DestPath
+			);
+			}
+		*/
 	}
 
 	return true;
@@ -419,11 +429,10 @@ std::string DecryptStream(
 	bool Compressed
 )
 {
-
 	std::string Decrypted;
 
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
-	Decryptor.SetKeyWithIV( Key, 32, IV	);
+	Decryptor.SetKeyWithIV(Key, 32, IV);
 
 	if( Compressed )
 	{
@@ -457,13 +466,13 @@ std::string DecryptStream(
 	return Decrypted;
 }
 
-void HexDump( const char* Description, const void* Data, std::size_t Size )
+void HexDump(const char* Description, const void* Data, std::size_t Size)
 {
 	std::size_t i;
 	std::uint8_t Buffer[17];
 	const std::uint8_t* CurByte = reinterpret_cast<const std::uint8_t*>(Data);
 
-	if( Description != NULL)
+	if( Description != NULL )
 	{
 		std::printf(
 			"\e[5m%s\e[0m:\n",
@@ -475,7 +484,7 @@ void HexDump( const char* Description, const void* Data, std::size_t Size )
 	{
 		if( (i % 16) == 0 )
 		{
-			if( i != 0)
+			if( i != 0 )
 			{
 				std::printf("  \e[0;35m%s\e[0m\n", Buffer);
 			}
