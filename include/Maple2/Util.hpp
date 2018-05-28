@@ -9,6 +9,13 @@ namespace Maple2
 namespace Util
 {
 
+std::string EncryptStream(
+	const std::string& Data,
+	const std::uint8_t IV[16],
+	const std::uint8_t Key[32],
+	bool Compress = true
+);
+
 std::string DecryptStream(
 	const std::string& Encoded,
 	const std::uint8_t IV[16],

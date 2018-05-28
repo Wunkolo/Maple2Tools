@@ -14,6 +14,50 @@ namespace Maple2
 {
 namespace Util
 {
+std::string EncryptStream(
+	const std::string& Data,
+	const std::uint8_t IV[16],
+	const std::uint8_t Key[32],
+	bool Compress
+)
+{
+	std::string Encrypted;
+
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption Encryptor;
+	Encryptor.SetKeyWithIV(Key, 32, IV);
+
+	if( Compress )
+	{
+		CryptoPP::StringSource(
+			Data,
+			true,
+			new CryptoPP::ZlibCompressor(
+				new CryptoPP::StreamTransformationFilter(
+					Encryptor,
+					new CryptoPP::Base64Encoder(
+						new CryptoPP::StringSink(Encrypted)
+					)
+				)
+			)
+		);
+	}
+	else
+	{
+		CryptoPP::StringSource(
+			Data,
+			true,
+			new CryptoPP::StreamTransformationFilter(
+				Encryptor,
+				new CryptoPP::Base64Encoder(
+					new CryptoPP::StringSink(Encrypted)
+				)
+			)
+		);
+	}
+
+	return Encrypted;
+}
+
 std::string DecryptStream(
 	const std::string& Encoded,
 	const std::uint8_t IV[16],
