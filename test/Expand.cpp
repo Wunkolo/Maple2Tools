@@ -124,8 +124,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		return false;
 	}
 
-	Maple2::Magic Identifier;
-	Identifier = Util::Read<Maple2::Magic>(HeaderFile);
+	const Maple2::Magic Identifier = Util::Read<Maple2::Magic>(HeaderFile);
 	if( Identifier != PackTraits::Identifier )
 	{
 		// Invalid magic
@@ -383,8 +382,7 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 		return false;
 	}
 
-	Maple2::Magic Identifier;
-	Identifier = Util::Read<Maple2::Magic>(FileIn);
+	const Maple2::Magic Identifier = Util::Read<Maple2::Magic>(FileIn);
 	FileIn.close();
 
 	switch( Identifier )
