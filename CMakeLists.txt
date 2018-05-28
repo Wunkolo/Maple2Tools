@@ -60,6 +60,7 @@ target_link_libraries(
 if( CMAKE_COMPILER_IS_GNUCXX )
 	target_link_libraries(
 		Expand
+		PRIVATE
 		stdc++fs
 	)
 endif()
