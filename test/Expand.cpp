@@ -118,8 +118,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %s\n",
-			HeaderPath.c_str()
+			"Error opening file for reading: %ls\n",
+			HeaderPath.wstring().c_str()
 		);
 		return false;
 	}
@@ -135,7 +135,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
 
 	std::printf(
-		"File: %s\n"
+		"File: %ls\n"
 		"Magic: %x ( `%.4s` )\n"
 		"FATCompressedSize: %zx ( %zu )\n"
 		"FATEncodedSize: %zx ( %zu )\n"
@@ -145,7 +145,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		"TotalFiles: %x ( %u )\n"
 		"FATSize: %zx ( %zu )\n"
 		"\n",
-		HeaderPath.c_str(),
+		HeaderPath.wstring().c_str(),
 		static_cast<std::uint32_t>(Identifier),
 		reinterpret_cast<const char*>(&Identifier),
 		StreamHeader.FATCompressedSize,
@@ -197,7 +197,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	// );
 
 	// Generate list of File list entries
-	std::map<std::size_t, std::string> FileListEntries;
+	std::map<std::size_t, fs::path> FileListEntries;
 	{
 		// Split based on \r\n
 		static const std::regex RegExNewline("[\r\n]+");
@@ -279,8 +279,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	const fs::path DataPath = fs::path(HeaderPath).replace_extension(".m2d");
 
 	std::printf(
-		"Processing data file: %s\n",
-		DataPath.c_str()
+		"Processing data file: %ls\n",
+		DataPath.wstring().c_str()
 	);
 
 	std::ifstream DataFile;
@@ -293,8 +293,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %s\n",
-			DataPath.c_str()
+			"Error opening file for reading: %ls\n",
+			DataPath.wstring().c_str()
 		);
 		return false;
 	}
@@ -346,7 +346,10 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 			DestPath / fs::path(FileListEntries[i + 1]).parent_path()
 		);
 
-		std::puts((DestPath / fs::path(FileListEntries[i + 1])).c_str());
+		std::printf(
+			"%ls\n",
+			(DestPath / fs::path(FileListEntries[i + 1])).wstring().c_str()
+		);
 		std::ofstream DumpFile;
 		DumpFile.open(
 			DestPath / fs::path(FileListEntries[i + 1]),
