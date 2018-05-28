@@ -404,20 +404,20 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 			DestPath
 		);
 	}
-		/*
-			case Maple2::Magic::OS2F:
-			{
-			return DumpPackStream<Maple2::OS2FTraits>(
-			HeaderPath, DestPath
-			);
-			}
-			case Maple2::Magic::PS2F:
-			{
-			return DumpPackStream<Maple2::PS2FTraits>(
-			HeaderPath, DestPath
-			);
-			}
-		*/
+	case Maple2::Magic::OS2F:
+	{
+		return DumpPackStream<Maple2::OS2FTraits>(
+			HeaderPath,
+			DestPath
+		);
+	}
+	case Maple2::Magic::PS2F:
+	{
+		return DumpPackStream<Maple2::PS2FTraits>(
+			HeaderPath,
+			DestPath
+		);
+	}
 	}
 
 	return true;
