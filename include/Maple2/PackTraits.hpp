@@ -6,14 +6,13 @@
 
 namespace Maple2
 {
-
 template< Identifier Version >
-struct PackFileTraits
+struct PackFile
 {
 };
 
 template<>
-struct PackFileTraits<Identifier::MS2F>
+struct PackFile<Identifier::MS2F>
 {
 	static constexpr Identifier Identifier = Identifier::MS2F;
 	using StreamType = PackStreamVer1;
@@ -23,7 +22,7 @@ struct PackFileTraits<Identifier::MS2F>
 };
 
 template<>
-struct PackFileTraits<Identifier::NS2F>
+struct PackFile<Identifier::NS2F>
 {
 	static constexpr Identifier Identifier = Identifier::NS2F;
 	using StreamType = PackStreamVer2;
@@ -33,7 +32,7 @@ struct PackFileTraits<Identifier::NS2F>
 };
 
 template<>
-struct PackFileTraits<Identifier::OS2F>
+struct PackFile<Identifier::OS2F>
 {
 	static constexpr Identifier Identifier = Identifier::OS2F;
 	using StreamType = PackStreamVer3;
@@ -43,7 +42,7 @@ struct PackFileTraits<Identifier::OS2F>
 };
 
 template<>
-struct PackFileTraits<Identifier::PS2F>
+struct PackFile<Identifier::PS2F>
 {
 	static constexpr Identifier Identifier = Identifier::PS2F;
 	using StreamType = PackStreamVer3;
@@ -52,9 +51,12 @@ struct PackFileTraits<Identifier::PS2F>
 	static constexpr auto Key_LUT = PS2F_Key_LUT;
 };
 
-typedef PackFileTraits<Identifier::MS2F> MS2FTraits;
-typedef PackFileTraits<Identifier::NS2F> NS2FTraits;
-typedef PackFileTraits<Identifier::OS2F> OS2FTraits;
-typedef PackFileTraits<Identifier::PS2F> PS2FTraits;
 
+namespace Traits
+{
+typedef PackFile<Identifier::MS2F> MS2F;
+typedef PackFile<Identifier::NS2F> NS2F;
+typedef PackFile<Identifier::OS2F> OS2F;
+typedef PackFile<Identifier::PS2F> PS2F;
+}
 }

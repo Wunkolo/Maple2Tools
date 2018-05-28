@@ -392,28 +392,28 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 	{
 	case Maple2::Identifier::MS2F:
 	{
-		return DumpPackStream<Maple2::MS2FTraits>(
+		return DumpPackStream<Maple2::PackTraits::MS2F>(
 			HeaderPath,
 			DestPath
 		);
 	}
 	case Maple2::Identifier::NS2F:
 	{
-		return DumpPackStream<Maple2::NS2FTraits>(
+		return DumpPackStream<Maple2::PackTraits::NS2F>(
 			HeaderPath,
 			DestPath
 		);
 	}
 	case Maple2::Identifier::OS2F:
 	{
-		return DumpPackStream<Maple2::OS2FTraits>(
+		return DumpPackStream<Maple2::PackTraits::OS2F>(
 			HeaderPath,
 			DestPath
 		);
 	}
 	case Maple2::Identifier::PS2F:
 	{
-		return DumpPackStream<Maple2::PS2FTraits>(
+		return DumpPackStream<Maple2::PackTraits::PS2F>(
 			HeaderPath,
 			DestPath
 		);
