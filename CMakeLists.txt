@@ -51,8 +51,15 @@ add_executable(
 target_link_libraries(
 	Expand
 	PRIVATE
-	stdc++fs
 	Maple2
 	cryptopp
 	${CMAKE_THREAD_LIBS_INIT}
 )
+
+# Link filesystem libs
+if( CMAKE_COMPILER_IS_GNUCXX )
+	target_link_libraries(
+		Expand
+		stdc++fs
+	)
+endif()
