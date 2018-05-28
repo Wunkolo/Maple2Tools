@@ -33,7 +33,7 @@ std::string DecryptStream(
 
 bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath);
 
-void HexDump(const char* Desription, const void* Data, std::size_t Size);
+void HexDump(const char* Description, const void* Data, std::size_t Size);
 
 int main(int argc, char* argv[])
 {
