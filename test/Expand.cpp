@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 					CurDest
 				);
 			}
-			catch( fs::filesystem_error& e )
+			catch( fs::filesystem_error& )
 			{
 			}
 
