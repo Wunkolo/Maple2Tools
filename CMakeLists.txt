@@ -46,7 +46,6 @@ target_link_libraries(
 	PRIVATE
 	cryptopp
 )
-
 ## M2H Research
 
 # Expands .m2h/.m2d files into folder and "flattens" the virtual file system
@@ -61,10 +60,27 @@ target_link_libraries(
 	${CMAKE_THREAD_LIBS_INIT}
 )
 
-# Link filesystem libs
+# Packs a folder into a .m2h/.m2d pai
+add_executable(
+	Pack
+	test/Pack.cpp
+)
+target_link_libraries(
+	Pack
+	PRIVATE
+	Maple2
+	${CMAKE_THREAD_LIBS_INIT}
+)
+
+# Link filesystem libs for GCC/Clang
 if( CMAKE_COMPILER_IS_GNUCXX )
 	target_link_libraries(
 		Maple2
+		PRIVATE
+		stdc++fs
+	)
+	target_link_libraries(
+		Pack
 		PRIVATE
 		stdc++fs
 	)
