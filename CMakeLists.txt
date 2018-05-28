@@ -39,6 +39,7 @@ add_library(
 	Maple2
 	STATIC
 	source/Maple2/Keys.cpp
+	source/Maple2/Util.cpp
 )
 
 ## M2H Research
@@ -58,6 +59,11 @@ target_link_libraries(
 
 # Link filesystem libs
 if( CMAKE_COMPILER_IS_GNUCXX )
+	target_link_libraries(
+		Maple2
+		PRIVATE
+		stdc++fs
+	)
 	target_link_libraries(
 		Expand
 		PRIVATE
