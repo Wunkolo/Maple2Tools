@@ -472,7 +472,7 @@ void HexDump(const char* Description, const void* Data, std::size_t Size)
 	std::uint8_t Buffer[17];
 	const std::uint8_t* CurByte = reinterpret_cast<const std::uint8_t*>(Data);
 
-	if( Description != NULL )
+	if( Description != nullptr )
 	{
 		std::printf(
 			"\e[5m%s\e[0m:\n",
