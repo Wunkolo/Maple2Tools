@@ -379,8 +379,8 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %s\n",
-			HeaderPath.c_str()
+			"Error opening file for reading: %ls\n",
+			HeaderPath.wstring().c_str()
 		);
 		return false;
 	}
