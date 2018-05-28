@@ -17,7 +17,7 @@ constexpr std::uint32_t MakeMagic(
 	);
 }
 
-enum class Magic : std::uint32_t
+enum class Identifier : std::uint32_t
 {
 	MS2F = MakeMagic( 'M', 'S', '2', 'F' ),
 	NS2F = MakeMagic( 'N', 'S', '2', 'F' ),

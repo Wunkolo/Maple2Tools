@@ -124,8 +124,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		return false;
 	}
 
-	const Maple2::Magic Identifier = Util::Read<Maple2::Magic>(HeaderFile);
-	if( Identifier != PackTraits::Identifier )
+	const Maple2::Identifier Magic = Util::Read<Maple2::Identifier>(HeaderFile);
+	if( Magic != PackTraits::Identifier )
 	{
 		// Invalid magic
 		return false;
@@ -146,8 +146,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		"FATSize: %zx ( %zu )\n"
 		"\n",
 		HeaderPath.wstring().c_str(),
-		static_cast<std::uint32_t>(Identifier),
-		reinterpret_cast<const char*>(&Identifier),
+		static_cast<std::uint32_t>(Magic),
+		reinterpret_cast<const char*>(&Magic),
 		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
 		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
 		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
@@ -385,33 +385,33 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 		return false;
 	}
 
-	const Maple2::Magic Identifier = Util::Read<Maple2::Magic>(FileIn);
+	const Maple2::Identifier Magic = Util::Read<Maple2::Identifier>(FileIn);
 	FileIn.close();
 
-	switch( Identifier )
+	switch( Magic )
 	{
-	case Maple2::Magic::MS2F:
+	case Maple2::Identifier::MS2F:
 	{
 		return DumpPackStream<Maple2::MS2FTraits>(
 			HeaderPath,
 			DestPath
 		);
 	}
-	case Maple2::Magic::NS2F:
+	case Maple2::Identifier::NS2F:
 	{
 		return DumpPackStream<Maple2::NS2FTraits>(
 			HeaderPath,
 			DestPath
 		);
 	}
-	case Maple2::Magic::OS2F:
+	case Maple2::Identifier::OS2F:
 	{
 		return DumpPackStream<Maple2::OS2FTraits>(
 			HeaderPath,
 			DestPath
 		);
 	}
-	case Maple2::Magic::PS2F:
+	case Maple2::Identifier::PS2F:
 	{
 		return DumpPackStream<Maple2::PS2FTraits>(
 			HeaderPath,
