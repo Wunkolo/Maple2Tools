@@ -59,6 +59,7 @@ bool MakePackFile(
 		)
 	)
 	{
+		StreamHeader.TotalFiles++;
 		const auto& CurPath = CurFile.path();
 		const fs::path RelativePath = fs::path(
 			CurPath.wstring().substr(
@@ -66,17 +67,40 @@ bool MakePackFile(
 			)
 		);
 
+		std::size_t EncodedSize;
+		std::size_t CompressedSize;
+		EncodedSize = CompressedSize = 0;
+
+		typename PackTraits::FileHeaderType CurFATEntry = {};
+		CurFATEntry.FileIndex = StreamHeader.TotalFiles;
+		CurFATEntry.Compression = Maple2::CompressionType::Deflate;
+		CurFATEntry.CompressedSize = CompressedSize;
+		CurFATEntry.EncodedSize = EncodedSize;
+		CurFATEntry.Size = fs::file_size( CurPath );
+
 		std::printf(
-			"%ls\n",
+			"%zu,%ls\n",
+			static_cast<std::size_t>(StreamHeader.TotalFiles),
 			RelativePath.wstring().c_str()
 		);
-
-		StreamHeader.TotalFiles++;
+		FileTable.push_back(CurFATEntry);
 	}
+
+	StreamHeader.FATCompressedSize;      // DEFLATE length
+	StreamHeader.FATEncodedSize;         // Base64 length
+	StreamHeader.FATSize;                // Uncompressed size
+	StreamHeader.FileListCompressedSize; // DEFLATE length
+	StreamHeader.FileListEncodedSize;    // Base64 length
+	StreamHeader.FileListSize;           // Uncompressed size
 
 	// Write header
 	Util::Write(HeaderFile, PackTraits::Magic);
 	Util::Write(HeaderFile, StreamHeader);
+
+	// Write file allocation table
+
+	// Write filelist
+
 
 	return true;
 }
