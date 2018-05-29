@@ -30,7 +30,7 @@ template< typename T >
 inline void Write(std::ostream& Stream, const T& Value)
 {
 	Stream.write(
-		reinterpret_cast<char*>(Value),
+		reinterpret_cast<const char*>(&Value),
 		sizeof(T)
 	);
 }
@@ -38,7 +38,7 @@ inline void Write(std::ostream& Stream, const T& Value)
 inline void Write(std::ostream& Stream, void* Data, std::size_t Size)
 {
 	Stream.write(
-		reinterpret_cast<char*>(Data),
+		reinterpret_cast<const char*>(&Data),
 		Size
 	);
 }
