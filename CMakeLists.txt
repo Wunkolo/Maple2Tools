@@ -20,10 +20,8 @@ include_directories(
 
 ### Optimizations
 if( MSVC )
-	add_compile_options( /arch:AVX2 )
 	add_compile_options( /W3 )
 elseif( CMAKE_COMPILER_IS_GNUCXX )
-	add_compile_options( -m64 )
 	add_compile_options( -march=native )
 	add_compile_options( -Ofast )
 	add_compile_options( -Wall )
