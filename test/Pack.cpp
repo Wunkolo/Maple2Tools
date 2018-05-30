@@ -145,8 +145,7 @@ bool MakePackFile(
 
 	// Create encrypted filelist
 	const std::string FileListData = FileList.str();
-	std::printf(
-		"FileList Data: %s\n",
+	std::puts(
 		FileListData.c_str()
 	);
 	std::string FileListCipher;
@@ -160,11 +159,6 @@ bool MakePackFile(
 		PackTraits::IV_LUT,
 		PackTraits::Key_LUT,
 		true
-	);
-
-	std::printf(
-		"FileListCipher: %s\n",
-		FileListCipher.c_str()
 	);
 
 	// Create encrypted File Allocation Table
@@ -188,10 +182,6 @@ bool MakePackFile(
 		PackTraits::IV_LUT,
 		PackTraits::Key_LUT,
 		true
-	);
-	std::printf(
-		"FileTableCipher: %s\n",
-		FATCipher.c_str()
 	);
 
 	// Write header
