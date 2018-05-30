@@ -1,12 +1,11 @@
 # Maple2Tools [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Wunkolo/Maple2Tools/blob/master/LICENSE)
 
-Research and reverse engineering of Nexon's MapleStory 2. Check out the [XeNTaX](http://forum.xentax.com/viewtopic.php?f=10&t=18090) thread here.
+Research and reverse engineering of [Nexon](http://nexon.net)'s [MapleStory 2](http://maplestory2.nexon.net/en). Check out the [XeNTaX](http://forum.xentax.com/viewtopic.php?f=10&t=18090) thread here.
 
 ## Dependencies
 
  * [Cmake 3.2.2+](https://www.cmake.org/download/)
  * [Crypto++ 7](https://github.com/weidai11/cryptopp)
-
 
 # Building
 
@@ -34,15 +33,14 @@ All targets will then be generated in the `build` directory.
 # Usage
 
 ## Expand
-Expand will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents).
+[Expand](tools/Expand.cpp) will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents).
 This effectively flattens out the entire runtime virtual file system(internally named `CFileSystem`) of MapleStory 2.
 This does the exact opposite of the `Pack` command.
 The expander is very fast and multi-threaded and will create a new thread to extract with in parallel for every `.m2h/.m2d` pair it encounters.
 It is recommended to run this on non-mechanical memory such as an SSD or RAM drive.
 
-`./Expand MapleFiles Dump`
-
 ```
+$ Expand MapleFiles Dump
 MapleStory2 Filesystem expander:
 	"Flattens" a filesystem, expanding all m2h/m2d files it encounters
 	into a folder of the same name
@@ -72,7 +70,7 @@ Dump/MapleFiles/appdata/Data/Resource/Model/Path/coupleaction_dummy_bowdown_diff
 ...
 ```
 ```
-tree -d Dump | head -n 50
+$ tree -d Dump | head -n 50
 Dump
 └── MapleFiles
     ├── appdata
@@ -127,10 +125,10 @@ Dump
 ```
 ## Pack
 
-`Pack` will dive into a directory and will recursively add each file into a `.m2h/.m2d` archive pair using the specified `PackStream` version.
+[Pack](tools/Pack.cpp) will dive into a directory and will recursively add each file into a `.m2h/.m2d` archive pair using the specified `PackStream` version.
 Pretty much does the exact opposite of `Expand`.
 ```
-./Pack MS2F Assets/MyFiles
+$ Pack MS2F Assets/MyFiles
 MapleStory2 Filesystem packer:
 	"Packs" a filesystem, creating an .m2h/.m2d pair
 	of the original folder's name
@@ -146,7 +144,7 @@ Creating data file: ...Assets/MyFiles.m2d
 
 ```
 ```
-tree Assets
+$ tree Assets
 Assets/
 ├── MyFiles
 │   ├── Folder1
