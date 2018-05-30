@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <vector>
+#include <sstream>
+#include <cstring>
 
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
@@ -50,6 +52,7 @@ bool MakePackFile(
 {
 	typename PackTraits::StreamType StreamHeader = {};
 	std::vector<typename PackTraits::FileHeaderType> FileTable;
+	std::ostringstream FileList;
 
 	for( 
 		const auto& CurFile
@@ -59,48 +62,117 @@ bool MakePackFile(
 		)
 	)
 	{
-		StreamHeader.TotalFiles++;
 		const auto& CurPath = CurFile.path();
+		if( !fs::is_regular_file( CurPath ) )
+		{
+			// Skip non-files
+			continue;
+		}
+		StreamHeader.TotalFiles++;
 		const fs::path RelativePath = fs::path(
 			CurPath.wstring().substr(
 				TargetFolder.wstring().size() + 1
 			)
 		);
 
-		std::size_t EncodedSize;
-		std::size_t CompressedSize;
-		EncodedSize = CompressedSize = 0;
+		// Create Encoded data
+		std::ifstream CurFileStream(
+			CurPath,
+			std::ios::binary
+		);
+		std::string Encoded;
 
 		typename PackTraits::FileHeaderType CurFATEntry = {};
+		std::tie(
+			Encoded,
+			CurFATEntry.CompressedSize, // DEFLATE length
+			CurFATEntry.EncodedSize     // Base64 length
+		) = Maple2::Util::EncryptFile(
+			CurFileStream,
+			PackTraits::IV_LUT,
+			PackTraits::Key_LUT,
+			true
+		);
+		CurFileStream.close();
+
+		// Create FAT Entry
+		CurFATEntry.Offset = static_cast<std::size_t>(DataFile.tellp());
 		CurFATEntry.FileIndex = StreamHeader.TotalFiles;
 		CurFATEntry.Compression = Maple2::CompressionType::Deflate;
-		CurFATEntry.CompressedSize = CompressedSize;
-		CurFATEntry.EncodedSize = EncodedSize;
 		CurFATEntry.Size = fs::file_size( CurPath );
-
-		std::printf(
-			"%zu,%ls\n",
-			static_cast<std::size_t>(StreamHeader.TotalFiles),
-			RelativePath.wstring().c_str()
-		);
 		FileTable.push_back(CurFATEntry);
+
+		// Write Encoded data
+		DataFile << Encoded;
+
+		// Add to FileList
+		FileList
+			<< StreamHeader.TotalFiles
+			<< ','
+			<< RelativePath.string()
+			<< "\r\n";
 	}
 
-	StreamHeader.FATCompressedSize;      // DEFLATE length
-	StreamHeader.FATEncodedSize;         // Base64 length
-	StreamHeader.FATSize;                // Uncompressed size
-	StreamHeader.FileListCompressedSize; // DEFLATE length
-	StreamHeader.FileListEncodedSize;    // Base64 length
-	StreamHeader.FileListSize;           // Uncompressed size
+	// Create encrypted filelist
+	const std::string FileListData = FileList.str();
+	std::printf(
+		"FileList Data: %s\n",
+		FileListData.c_str()
+	);
+	std::string FileListCipher;
+	StreamHeader.FileListSize = FileListData.size();
+	std::tie(
+		FileListCipher,
+		StreamHeader.FileListCompressedSize, // DEFLATE length
+		StreamHeader.FileListEncodedSize     // Base64 length
+	) = Maple2::Util::EncryptString(
+		FileListData,
+		PackTraits::IV_LUT,
+		PackTraits::Key_LUT,
+		true
+	);
+
+	std::printf(
+		"FileListCipher: %s\n",
+		FileListCipher.c_str()
+	);
+
+	// Create encrypted File Allocation Table
+	std::string FATString;
+	std::string FATCipher;
+	FATString.resize(
+		FileTable.size() * sizeof(typename PackTraits::FileHeaderType)
+	);
+	std::memcpy(
+		FATString.data(),
+		FileTable.data(),
+		FileTable.size() * sizeof(typename PackTraits::FileHeaderType)
+	);
+	StreamHeader.FATSize = FATString.size();
+	std::tie(
+		FATCipher,
+		StreamHeader.FATCompressedSize,      // DEFLATE length
+		StreamHeader.FATEncodedSize          // Base64 length
+	) = Maple2::Util::EncryptString(
+		FATString,
+		PackTraits::IV_LUT,
+		PackTraits::Key_LUT,
+		true
+	);
+	std::printf(
+		"FileTableCipher: %s\n",
+		FATCipher.c_str()
+	);
 
 	// Write header
 	Util::Write(HeaderFile, PackTraits::Magic);
 	Util::Write(HeaderFile, StreamHeader);
 
-	// Write file allocation table
+	// Write File List
+	HeaderFile << FileListCipher;
 
-	// Write filelist
-
+	// Write File Allocation Table
+	HeaderFile << FATCipher;
 
 	return true;
 }
