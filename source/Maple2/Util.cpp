@@ -230,7 +230,7 @@ std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
 	for( ; TokenIter != TokenEnd; ++TokenIter )
 	{
 		const std::string CurFileLine = (*TokenIter).str();
-		const fs::path HeaderFiledex = CurFileLine.substr(
+		const fs::path HeaderFileIndex = CurFileLine.substr(
 			0,
 			CurFileLine.find_first_of(',')
 		);
@@ -238,7 +238,7 @@ std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
 			CurFileLine.find_last_of(',') + 1
 		);
 
-		FileListEntries[std::stoull(HeaderFiledex)] = FileName;
+		FileListEntries[std::stoull(HeaderFileIndex)] = FileName;
 	}
 	return FileListEntries;
 }
