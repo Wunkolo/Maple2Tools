@@ -33,7 +33,8 @@ Research and reverse engineering of Nexon's MapleStory 2. Check out the [XeNTaX]
 ## Usage
 
 ### Expand
- Expand will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents). This effectively flattens out the entire runtime virtual file system(internally named `CFileSystem`) of MapleStory 2.
+ Expand will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents).
+ This effectively flattens out the entire runtime virtual file system(internally named `CFileSystem`) of MapleStory 2. Which is the exact opposite of the `Pack` command.
  The expander is very fast and multi-threaded and will create a new extraction thread for every `.m2h/.m2d` pair it encounters.
 
  `./Expand MapleFiles Dump`
@@ -121,4 +122,34 @@ Dump
     │   │   │   │   │   ├── server
     │   │   │   │   │   └── symbol_shop
 ...
+```
+### Pack
+
+`Pack` will dive into a directory and will recursively add each file into a `.m2h/.m2d` archive pair using the specified `PackStream` version.
+Pretty much does the exact opposite of `Expand`.
+```
+./Pack MS2F TestFolder/Target
+MapleStory2 Filesystem packer:
+	"Packs" a filesystem, creating an .m2h/.m2d pair
+	of the original folder's name
+Build Date: Tue May 29 23:30:07 2018
+	- wunkolo <wunkolo@gmail.com>
+Usage: Pack (M2SF/N2SF/O2SF/P2SF) (List of folders to pack)
+
+Creating header file: ...TestFolder/Target.m2h
+Creating data file: ...TestFolder/Target.m2d
+1,blah.txt
+2,Folder1/test.txt
+3,.hidden
+
+```
+```
+tree TestFolder
+TestFolder/
+├── Target
+│   ├── Folder1
+│   │   └── test.txt
+│   └── blah.txt
+├── Target.m2d
+└── Target.m2h
 ```
