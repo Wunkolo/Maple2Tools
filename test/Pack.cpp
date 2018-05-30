@@ -29,9 +29,9 @@ int main(int argc, char* argv[])
 		"\t- wunkolo <wunkolo@gmail.com>\n"
 		"Usage: Pack (M2SF/N2SF/O2SF/P2SF) (List of folders to pack)\n"
 	);
-	if( argc < 2 )
+	if( argc < 3 )
 	{
-		std::puts("No argument given");
+		std::puts("Invalid arguments");
 		return EXIT_FAILURE;
 	}
 
