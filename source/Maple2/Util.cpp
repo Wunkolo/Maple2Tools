@@ -2,6 +2,7 @@
 
 #include <regex>
 
+#include <cryptopp/files.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/base64.h>
 #include <cryptopp/modes.h>
@@ -14,48 +15,156 @@ namespace Maple2
 {
 namespace Util
 {
-std::string EncryptStream(
+std::tuple<
+	std::string, // Encrypted data
+	std::uint64_t, // Compressed Size
+	std::uint64_t  // Encoded Size
+> EncryptString(
 	const std::string& Data,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
+	const std::uint8_t IV_LUT[128][16],
+	const std::uint8_t Key_LUT[128][32],
 	bool Compress
 )
 {
-	std::string Encrypted;
+	std::string Encoded;
+	std::uint64_t CompressedSize;
 
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption Encryptor;
-	Encryptor.SetKeyWithIV(Key, 32, IV);
 
+	// Encrypt: Data -> ZLib -> AES -> Base64 -> Cipher
 	if( Compress )
 	{
+		// Compress
+		std::string Compressed;
 		CryptoPP::StringSource(
 			Data,
 			true,
 			new CryptoPP::ZlibCompressor(
-				new CryptoPP::StreamTransformationFilter(
-					Encryptor,
-					new CryptoPP::Base64Encoder(
-						new CryptoPP::StringSink(Encrypted)
-					)
+				new CryptoPP::StringSink(Compressed)
+			)
+		);
+		CompressedSize = Compressed.size();
+		// Encrypt(AES) + Base64
+		Encryptor.SetKeyWithIV(
+			Key_LUT[CompressedSize % 128],
+			32,
+			IV_LUT[CompressedSize % 128]
+		);
+		CryptoPP::StringSource(
+			Compressed,
+			true,
+			new CryptoPP::StreamTransformationFilter(
+				Encryptor,
+				new CryptoPP::Base64Encoder(
+					new CryptoPP::StringSink(Encoded)
 				)
 			)
 		);
 	}
 	else
 	{
+		// Encrypt(AES) + Base64
+		Encryptor.SetKeyWithIV(
+			Key_LUT[Data.size() % 128],
+			32,
+			IV_LUT[Data.size() % 128]
+		);
 		CryptoPP::StringSource(
 			Data,
 			true,
 			new CryptoPP::StreamTransformationFilter(
 				Encryptor,
 				new CryptoPP::Base64Encoder(
-					new CryptoPP::StringSink(Encrypted)
+					new CryptoPP::StringSink(Encoded)
+				)
+			)
+		);
+		CompressedSize = Encoded.size();
+	}
+
+	Encoded.pop_back(); // Remove trailing "\n"
+	return std::make_tuple(
+		Encoded,
+		CompressedSize,
+		Encoded.size()
+	);
+}
+
+std::tuple<
+	std::string, // Encrypted data
+	std::uint64_t, // Compressed Size
+	std::uint64_t  // Encoded Size
+> EncryptFile(
+	std::ifstream& FileStream,
+	const std::uint8_t IV_LUT[128][16],
+	const std::uint8_t Key_LUT[128][32],
+	bool Compress
+)
+{
+	std::string Encoded;
+	std::uint64_t CompressedSize;
+
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption Encryptor;
+
+	// Encrypt: Data -> ZLib -> AES -> Base64 -> Cipher
+	if( Compress )
+	{
+		// Compress
+		std::string Compressed;
+		CryptoPP::FileSource(
+			FileStream,
+			true,
+			new CryptoPP::ZlibCompressor(
+				new CryptoPP::StringSink(Compressed)
+			)
+		);
+		CompressedSize = Compressed.size();
+		// Encrypt(AES) + Base64
+		Encryptor.SetKeyWithIV(
+			Key_LUT[CompressedSize % 128],
+			32,
+			IV_LUT[CompressedSize % 128]
+		);
+		CryptoPP::StringSource(
+			Compressed,
+			true,
+			new CryptoPP::StreamTransformationFilter(
+				Encryptor,
+				new CryptoPP::Base64Encoder(
+					new CryptoPP::StringSink(Encoded)
 				)
 			)
 		);
 	}
+	else
+	{
+		// Encrypt(AES) + Base64
+		FileStream.seekg(0, std::ios::end);
+		Encryptor.SetKeyWithIV(
+			Key_LUT[FileStream.tellg() % 128],
+			32,
+			IV_LUT[FileStream.tellg() % 128]
+		);
+		FileStream.seekg(0, std::ios::beg);
+		CryptoPP::FileSource(
+			FileStream,
+			true,
+			new CryptoPP::StreamTransformationFilter(
+				Encryptor,
+				new CryptoPP::Base64Encoder(
+					new CryptoPP::StringSink(Encoded)
+				)
+			)
+		);
+		CompressedSize = Encoded.size();
+	}
 
-	return Encrypted;
+	Encoded.pop_back(); // Remove trailing "\n"
+	return std::make_tuple(
+		Encoded,
+		CompressedSize,
+		Encoded.size()
+	);
 }
 
 std::string DecryptStream(
@@ -70,6 +179,7 @@ std::string DecryptStream(
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
 	Decryptor.SetKeyWithIV(Key, 32, IV);
 
+	// Decrypt: Cipher -> Base64 -> AES -> ZLib -> Data
 	if( Compressed )
 	{
 		CryptoPP::StringSource(
