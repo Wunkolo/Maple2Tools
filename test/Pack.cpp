@@ -93,9 +93,13 @@ bool MakePackFile(
 	)
 	{
 		const auto& CurPath = CurFile.path();
-		if( !fs::is_regular_file( CurPath ) )
+		if( !fs::is_regular_file( CurPath )
+			|| CurPath.extension() == ".m2h"
+			|| CurPath.extension() == ".m2d"
+		)
 		{
 			// Skip non-files
+			// Skip .m2h/.m2d files that we possibly just created
 			continue;
 		}
 		StreamHeader.TotalFiles++;
