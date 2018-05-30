@@ -24,10 +24,10 @@ int main( int argc, char* argv[] )
 	std::puts(
 		"MapleStory2 Filesystem packer:\n"
 		"\t\"Packs\" a filesystem, creating an .m2h/.m2d pair\n"
-		"\tor the original folder's name\n"
+		"\tof the original folder's name\n"
 		"Build Date: " __TIMESTAMP__ "\n"
 		"\t- wunkolo <wunkolo@gmail.com>\n"
-		"Usage: Pack (List of folders to pack)\n"
+		"Usage: Pack (M2SF/N2SF/O2SF/P2SF) (List of folders to pack)\n"
 	);
 	if( argc < 2 )
 	{
@@ -35,9 +35,39 @@ int main( int argc, char* argv[] )
 		return EXIT_FAILURE;
 	}
 
-	for( std::size_t i = 1; i < static_cast<std::size_t>(argc); ++i )
+	for( std::size_t i = 2; i < static_cast<std::size_t>(argc); ++i )
 	{
-		PackFolder( argv[i], Maple2::Identifier::MS2F );
+		switch( *reinterpret_cast<Maple2::Identifier*>(argv[1]) )
+		{
+		case Maple2::Identifier::MS2F:
+		{
+			PackFolder( argv[i], Maple2::Identifier::MS2F );
+			break;
+		}
+		case Maple2::Identifier::NS2F:
+		{
+			PackFolder( argv[i], Maple2::Identifier::NS2F );
+			break;
+		}
+		case Maple2::Identifier::OS2F:
+		{
+			PackFolder( argv[i], Maple2::Identifier::OS2F );
+			break;
+		}
+		case Maple2::Identifier::PS2F:
+		{
+			PackFolder( argv[i], Maple2::Identifier::PS2F );
+			break;
+		}
+		default:
+		{
+			std::printf(
+				"Unknown PackStream version: \'%s\'",
+				argv[1]
+			);
+			return EXIT_FAILURE;
+		}
+		}
 	}
 
 	return EXIT_SUCCESS;
