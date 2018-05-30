@@ -20,10 +20,8 @@ include_directories(
 
 ### Optimizations
 if( MSVC )
-	add_compile_options( /arch:AVX2 )
 	add_compile_options( /W3 )
 elseif( CMAKE_COMPILER_IS_GNUCXX )
-	add_compile_options( -m64 )
 	add_compile_options( -march=native )
 	add_compile_options( -Ofast )
 	add_compile_options( -Wall )
@@ -51,7 +49,7 @@ target_link_libraries(
 # Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(
 	Expand
-	test/Expand.cpp
+	tools/Expand.cpp
 )
 target_link_libraries(
 	Expand
@@ -63,7 +61,7 @@ target_link_libraries(
 # Packs a folder into a .m2h/.m2d pai
 add_executable(
 	Pack
-	test/Pack.cpp
+	tools/Pack.cpp
 )
 target_link_libraries(
 	Pack
