@@ -10,36 +10,39 @@ Research and reverse engineering of Nexon's MapleStory 2. Check out the [XeNTaX]
 
 # Building
 
- Clone the repository:
+Clone the repository:
 
- `git clone https://github.com/Wunkolo/Maple2Tools`
+`git clone https://github.com/Wunkolo/Maple2Tools`
 
-### Windows
- `At the moment there is no tested building method using Windows`
+## Windows
 
-### Linux
+`TODO:` At the moment [getting Crypto++ to work with CMake](https://www.cryptopp.com/wiki/Cmake#CMake_Removal) is proving to be a feat that will require some manual tinkering to get this to build on windows. This is the only thing in the way of getting a concise Windows build as the rest of the code is portable and build-able on windows but a simple way to link Crypto++ requires some overhead. Feel free to contribute a pull request if you manage to get a build going.
 
- Typical [Cmake out-of-source build procedure](http://preshing.com/20170511/how-to-build-a-cmake-based-project/#running-cmake-from-the-command-line):
+## Linux
 
- ```
- cd Maple2Tools
- mkdir build
- cd build
- cmake ..
- make
- ```
- All targets will then be generated in the `build` directory.
+Typical [CMake out-of-source build procedure](http://preshing.com/20170511/how-to-build-a-cmake-based-project/#running-cmake-from-the-command-line):
+
+```
+cd Maple2Tools
+mkdir build
+cd build
+cmake ..
+make
+```
+All targets will then be generated in the `build` directory.
 
 # Usage
 
 ## Expand
- Expand will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents).
- This effectively flattens out the entire runtime virtual file system(internally named `CFileSystem`) of MapleStory 2. Which is the exact opposite of the `Pack` command.
- The expander is very fast and multi-threaded and will create a new extraction thread for every `.m2h/.m2d` pair it encounters.
+Expand will recursively dive into a target folder(such as your MapleStory2 game directory), and create symbolic links to all files it encounters. It will "soft-mirror" the target folder. For the ".m2h/.m2d" files it encounters it will instead create a folder of the same name full of its extracted contents(Ex: `Xml.m2h/Xml.m2d` will create an `Xml` folder with its unpacked contents).
+This effectively flattens out the entire runtime virtual file system(internally named `CFileSystem`) of MapleStory 2.
+This does the exact opposite of the `Pack` command.
+The expander is very fast and multi-threaded and will create a new thread to extract with in parallel for every `.m2h/.m2d` pair it encounters.
+It is recommended to run this on non-mechanical memory such as an SSD or RAM drive.
 
- `./Expand MapleFiles Dump`
+`./Expand MapleFiles Dump`
 
- ```
+```
 MapleStory2 Filesystem expander:
 	"Flattens" a filesystem, expanding all m2h/m2d files it encounters
 	into a folder of the same name
