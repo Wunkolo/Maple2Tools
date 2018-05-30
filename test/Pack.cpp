@@ -19,7 +19,7 @@ bool PackFolder(
 	Maple2::Identifier PackVersion
 );
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
 	std::puts(
 		"MapleStory2 Filesystem packer:\n"
@@ -35,39 +35,29 @@ int main( int argc, char* argv[] )
 		return EXIT_FAILURE;
 	}
 
-	for( std::size_t i = 2; i < static_cast<std::size_t>(argc); ++i )
+	const Maple2::Identifier PackVersion = *reinterpret_cast<Maple2::Identifier*>(argv[1]);
+
+	switch( PackVersion )
 	{
-		switch( *reinterpret_cast<Maple2::Identifier*>(argv[1]) )
+	case Maple2::Identifier::MS2F:
+	case Maple2::Identifier::NS2F:
+	case Maple2::Identifier::OS2F:
+	case Maple2::Identifier::PS2F:
+	{
+		for( std::size_t i = 2; i < static_cast<std::size_t>(argc); ++i )
 		{
-		case Maple2::Identifier::MS2F:
-		{
-			PackFolder( argv[i], Maple2::Identifier::MS2F );
-			break;
+			PackFolder(argv[i], PackVersion);
 		}
-		case Maple2::Identifier::NS2F:
-		{
-			PackFolder( argv[i], Maple2::Identifier::NS2F );
-			break;
-		}
-		case Maple2::Identifier::OS2F:
-		{
-			PackFolder( argv[i], Maple2::Identifier::OS2F );
-			break;
-		}
-		case Maple2::Identifier::PS2F:
-		{
-			PackFolder( argv[i], Maple2::Identifier::PS2F );
-			break;
-		}
-		default:
-		{
-			std::printf(
-				"Unknown PackStream version: \'%s\'",
-				argv[1]
-			);
-			return EXIT_FAILURE;
-		}
-		}
+		break;
+	}
+	default:
+	{
+		std::printf(
+			"Unknown PackStream version: \'%s\'",
+			argv[1]
+		);
+		return EXIT_FAILURE;
+	}
 	}
 
 	return EXIT_SUCCESS;
@@ -84,7 +74,7 @@ bool MakePackFile(
 	std::vector<typename PackTraits::FileHeaderType> FileTable;
 	std::ostringstream FileList;
 
-	for( 
+	for(
 		const auto& CurFile
 		: fs::recursive_directory_iterator(
 			TargetFolder,
@@ -93,7 +83,7 @@ bool MakePackFile(
 	)
 	{
 		const auto& CurPath = CurFile.path();
-		if( !fs::is_regular_file( CurPath )
+		if( !fs::is_regular_file(CurPath)
 			|| CurPath.extension() == ".m2h"
 			|| CurPath.extension() == ".m2d"
 		)
@@ -102,7 +92,7 @@ bool MakePackFile(
 			// Skip .m2h/.m2d files that we possibly just created
 			continue;
 		}
-		StreamHeader.TotalFiles++;
+		++StreamHeader.TotalFiles;
 		const fs::path RelativePath = fs::path(
 			CurPath.wstring().substr(
 				TargetFolder.wstring().size() + 1
@@ -119,8 +109,9 @@ bool MakePackFile(
 		typename PackTraits::FileHeaderType CurFATEntry = {};
 		std::tie(
 			Encoded,
-			CurFATEntry.CompressedSize, // DEFLATE length
-			CurFATEntry.EncodedSize     // Base64 length
+			CurFATEntry.CompressedSize,
+			// DEFLATE length
+			CurFATEntry.EncodedSize // Base64 length
 		) = Maple2::Util::EncryptFile(
 			CurFileStream,
 			PackTraits::IV_LUT,
@@ -133,7 +124,7 @@ bool MakePackFile(
 		CurFATEntry.Offset = static_cast<std::size_t>(DataFile.tellp());
 		CurFATEntry.FileIndex = StreamHeader.TotalFiles;
 		CurFATEntry.Compression = Maple2::CompressionType::Deflate;
-		CurFATEntry.Size = fs::file_size( CurPath );
+		CurFATEntry.Size = fs::file_size(CurPath);
 		FileTable.push_back(CurFATEntry);
 
 		// Write Encoded data
@@ -156,8 +147,9 @@ bool MakePackFile(
 	StreamHeader.FileListSize = FileListData.size();
 	std::tie(
 		FileListCipher,
-		StreamHeader.FileListCompressedSize, // DEFLATE length
-		StreamHeader.FileListEncodedSize     // Base64 length
+		StreamHeader.FileListCompressedSize,
+		// DEFLATE length
+		StreamHeader.FileListEncodedSize // Base64 length
 	) = Maple2::Util::EncryptString(
 		FileListData,
 		PackTraits::IV_LUT,
@@ -179,8 +171,9 @@ bool MakePackFile(
 	StreamHeader.FATSize = FATString.size();
 	std::tie(
 		FATCipher,
-		StreamHeader.FATCompressedSize,      // DEFLATE length
-		StreamHeader.FATEncodedSize          // Base64 length
+		StreamHeader.FATCompressedSize,
+		// DEFLATE length
+		StreamHeader.FATEncodedSize // Base64 length
 	) = Maple2::Util::EncryptString(
 		FATString,
 		PackTraits::IV_LUT,
@@ -206,7 +199,7 @@ bool PackFolder(
 	Maple2::Identifier PackVersion
 )
 {
-	if( !fs::exists( TargetFolder ) )
+	if( !fs::exists(TargetFolder) )
 	{
 		std::printf(
 			"Folder \"%ls\" does not exist\n",
@@ -215,7 +208,7 @@ bool PackFolder(
 		return false;
 	}
 
-	if( !fs::is_directory( TargetFolder ) )
+	if( !fs::is_directory(TargetFolder) )
 	{
 		std::printf(
 			"\"%ls\" is not a folder\n",
@@ -243,7 +236,6 @@ bool PackFolder(
 		);
 		return false;
 	}
-
 
 	std::ofstream DataFile;
 	DataFile.open(
