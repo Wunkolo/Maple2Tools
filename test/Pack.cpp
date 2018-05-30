@@ -109,8 +109,7 @@ bool MakePackFile(
 		typename PackTraits::FileHeaderType CurFATEntry = {};
 		std::tie(
 			Encoded,
-			CurFATEntry.CompressedSize,
-			// DEFLATE length
+			CurFATEntry.CompressedSize, // DEFLATE length
 			CurFATEntry.EncodedSize // Base64 length
 		) = Maple2::Util::EncryptFile(
 			CurFileStream,
@@ -171,8 +170,7 @@ bool MakePackFile(
 	StreamHeader.FATSize = FATString.size();
 	std::tie(
 		FATCipher,
-		StreamHeader.FATCompressedSize,
-		// DEFLATE length
+		StreamHeader.FATCompressedSize, // DEFLATE length
 		StreamHeader.FATEncodedSize // Base64 length
 	) = Maple2::Util::EncryptString(
 		FATString,
