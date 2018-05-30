@@ -49,7 +49,7 @@ target_link_libraries(
 # Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(
 	Expand
-	test/Expand.cpp
+	tools/Expand.cpp
 )
 target_link_libraries(
 	Expand
@@ -61,7 +61,7 @@ target_link_libraries(
 # Packs a folder into a .m2h/.m2d pai
 add_executable(
 	Pack
-	test/Pack.cpp
+	tools/Pack.cpp
 )
 target_link_libraries(
 	Pack
