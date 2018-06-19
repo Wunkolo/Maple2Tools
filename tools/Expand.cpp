@@ -301,7 +301,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		);
 
 		std::printf(
-			"%ls\n",
+			"[ %ls ]: %ls\n",
+			HeaderPath.stem().wstring().c_str(),
 			(
 				DestPath / fs::path(FileListEntries.at(i + 1))
 			).wstring().c_str()
