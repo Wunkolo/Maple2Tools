@@ -12,6 +12,13 @@
 #include <thread>
 #include <future>
 
+#ifdef __unix__
+#include <unistd.h>
+#ifdef _POSIX_VERSION
+#include <pthread.h>
+#endif
+#endif
+
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 
@@ -78,8 +85,24 @@ int main(int argc, char* argv[])
 
 				// Process .m2h into new folder of the same name
 				fs::create_directory(CurExpansion);
+				const auto ThreadProc = []
+				(const fs::path& Source, const fs::path& Expansion) -> bool
+				{
+				#ifdef _POSIX_VERSION
+					char ThreadName[16] = {0};
+					const auto PackName = Source.stem().string();
+					std::sprintf(
+						ThreadName,
+						PackName.length() > 7 ? "Expand: %.4s...":"Expand: %.7s",
+						PackName.c_str()
+					);
+
+					pthread_setname_np(pthread_self(), ThreadName);
+				#endif
+					return DumpPackFile(Source,Expansion);
+				};
 				Tasks.emplace_back(
-					std::async(DumpPackFile, CurSource, CurExpansion)
+					std::async(ThreadProc, CurSource, CurExpansion)
 				);
 			}
 		}
