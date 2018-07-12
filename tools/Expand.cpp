@@ -25,7 +25,7 @@ namespace fs = std::experimental::filesystem;
 #include <Maple2/Maple2.hpp>
 #include <Util/File.hpp>
 
-bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath);
+bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t TaskIndex);
 
 void HexDump(const char* Description, const void* Data, std::size_t Size);
 
@@ -56,6 +56,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::vector<std::future<bool> > Tasks;
+	std::size_t TaskIndex = 0;
 	for( const auto& CurEntry : fs::recursive_directory_iterator(SourcePath) )
 	{
 		if( fs::is_regular_file(CurEntry) )
@@ -86,7 +87,11 @@ int main(int argc, char* argv[])
 				// Process .m2h into new folder of the same name
 				fs::create_directory(CurExpansion);
 				const auto ThreadProc = []
-				(const fs::path& Source, const fs::path& Expansion) -> bool
+				(
+					const fs::path& Source,
+					const fs::path& Expansion,
+					std::size_t TaskIndex
+				) -> bool
 				{
 				#ifdef _POSIX_VERSION
 					char ThreadName[16] = {0};
@@ -99,10 +104,10 @@ int main(int argc, char* argv[])
 
 					pthread_setname_np(pthread_self(), ThreadName);
 				#endif
-					return DumpPackFile(Source,Expansion);
+					return DumpPackFile(Source,Expansion, TaskIndex);
 				};
 				Tasks.emplace_back(
-					std::async(ThreadProc, CurSource, CurExpansion)
+					std::async(ThreadProc, CurSource, CurExpansion, TaskIndex++)
 				);
 			}
 		}
@@ -112,11 +117,15 @@ int main(int argc, char* argv[])
 	{
 		CurTasks.get();
 	}
+	std::printf(
+		"\033[%zuB",
+		TaskIndex + 1
+	);
 	return EXIT_SUCCESS;
 }
 
 template< typename PackTraits >
-bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
+bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t TaskIndex)
 {
 	std::ifstream HeaderFile;
 	HeaderFile.open(
@@ -144,35 +153,35 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	typename PackTraits::StreamType StreamHeader = {};
 	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
 
-	std::printf(
-		"File: %s\n"
-		"Magic: %x ( `%.4s` )\n"
-		"FATCompressedSize: %zx ( %zu )\n"
-		"FATEncodedSize: %zx ( %zu )\n"
-		"FileListSize: %zx ( %zu )\n"
-		"FileListCompressedSize: %zx ( %zu )\n"
-		"FileListEncodedSize: %zx ( %zu )\n"
-		"TotalFiles: %zx ( %zu )\n"
-		"FATSize: %zx ( %zu )\n"
-		"\n",
-		HeaderPath.string().c_str(),
-		static_cast<std::uint32_t>(Magic),
-		reinterpret_cast<const char*>(&Magic),
-		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
-		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
-		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
-		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
-		static_cast<std::size_t>(StreamHeader.FileListSize),
-		static_cast<std::size_t>(StreamHeader.FileListSize),
-		static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
-		static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
-		static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
-		static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
-		static_cast<std::size_t>(StreamHeader.TotalFiles),
-		static_cast<std::size_t>(StreamHeader.TotalFiles),
-		static_cast<std::size_t>(StreamHeader.FATSize),
-		static_cast<std::size_t>(StreamHeader.FATSize)
-	);
+	// std::printf(
+	// 	"File: %s\n"
+	// 	"Magic: %x ( `%.4s` )\n"
+	// 	"FATCompressedSize: %zx ( %zu )\n"
+	// 	"FATEncodedSize: %zx ( %zu )\n"
+	// 	"FileListSize: %zx ( %zu )\n"
+	// 	"FileListCompressedSize: %zx ( %zu )\n"
+	// 	"FileListEncodedSize: %zx ( %zu )\n"
+	// 	"TotalFiles: %zx ( %zu )\n"
+	// 	"FATSize: %zx ( %zu )\n"
+	// 	"\n",
+	// 	HeaderPath.string().c_str(),
+	// 	static_cast<std::uint32_t>(Magic),
+	// 	reinterpret_cast<const char*>(&Magic),
+	// 	static_cast<std::size_t>(StreamHeader.FATCompressedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FATCompressedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FATEncodedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FATEncodedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FileListSize),
+	// 	static_cast<std::size_t>(StreamHeader.FileListSize),
+	// 	static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
+	// 	static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
+	// 	static_cast<std::size_t>(StreamHeader.TotalFiles),
+	// 	static_cast<std::size_t>(StreamHeader.TotalFiles),
+	// 	static_cast<std::size_t>(StreamHeader.FATSize),
+	// 	static_cast<std::size_t>(StreamHeader.FATSize)
+	// );
 
 	////////////////////////////////////////////////////////////////////////////
 	// FileList
@@ -211,7 +220,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
-	std::puts("Reading FAT Table");
+	// std::puts("Reading FAT Table");
 	std::string FileAllocationTable;
 	FileAllocationTable.resize(StreamHeader.FATEncodedSize);
 	HeaderFile.read(
@@ -255,10 +264,10 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	// Process data file
 	const fs::path DataPath = fs::path(HeaderPath).replace_extension(".m2d");
 
-	std::printf(
-		"Processing data file: %s\n",
-		DataPath.string().c_str()
-	);
+	// std::printf(
+	// 	"Processing data file: %s\n",
+	// 	DataPath.string().c_str()
+	// );
 
 	std::ifstream DataFile;
 	DataFile.open(
@@ -324,11 +333,16 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		);
 
 		std::printf(
-			"[ %s ]: %s\n",
-			HeaderPath.stem().string().c_str(),
-			(
-				DestPath / fs::path(FileListEntries.at(i + 1))
-			).string().c_str()
+			"\033[%zuB"                         // Move Down
+			"\033[2K"                           // Clear line
+			"\r"                                // Return to left
+			"[ %-20.20s ] | \033[1;37m%6.2f%%\033[0m \033[0;34m%-60.60s\033[0m"   // Printed string 
+			"\033[%zuA",                        // Move up
+			TaskIndex,
+			HeaderPath.stem().string().c_str(), // PackFile
+			(static_cast<float>(i + 1) / FATable.size()) * 100.0f,// Percentage
+			fs::path(FileListEntries.at(i + 1)).string().c_str(), // Current file
+			TaskIndex
 		);
 		std::ofstream DumpFile;
 		DumpFile.open(
@@ -340,14 +354,13 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 			FileData.data(),
 			FileData.size()
 		);
-
 		DumpFile.close();
 	}
 
 	return true;
 }
 
-bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
+bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t TaskIndex)
 {
 	std::ifstream FileIn;
 	FileIn.open(
@@ -368,39 +381,76 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 	const Maple2::Identifier Magic = Util::Read<Maple2::Identifier>(FileIn);
 	FileIn.close();
 
+	bool Result = false;
+	try
+	{
 	switch( Magic )
 	{
 	case Maple2::Identifier::MS2F:
 	{
-		return DumpPackStream<Maple2::PackTraits::MS2F>(
+		Result = DumpPackStream<Maple2::PackTraits::MS2F>(
 			HeaderPath,
-			DestPath
+			DestPath,
+			TaskIndex
 		);
+		break;
 	}
 	case Maple2::Identifier::NS2F:
 	{
-		return DumpPackStream<Maple2::PackTraits::NS2F>(
+		Result = DumpPackStream<Maple2::PackTraits::NS2F>(
 			HeaderPath,
-			DestPath
+			DestPath,
+			TaskIndex
 		);
+		break;
 	}
 	case Maple2::Identifier::OS2F:
 	{
-		return DumpPackStream<Maple2::PackTraits::OS2F>(
+		Result = DumpPackStream<Maple2::PackTraits::OS2F>(
 			HeaderPath,
-			DestPath
+			DestPath,
+			TaskIndex
 		);
+		break;
 	}
 	case Maple2::Identifier::PS2F:
 	{
-		return DumpPackStream<Maple2::PackTraits::PS2F>(
+		Result = DumpPackStream<Maple2::PackTraits::PS2F>(
 			HeaderPath,
-			DestPath
+			DestPath,
+			TaskIndex
 		);
+		break;
 	}
+	}
+	}
+	catch(...)
+	{
+		std::printf(
+			"\033[%zuB"                                // Move Down
+			"\033[2K"                                  // Clear line
+			"\r"                                       // Return to left
+			"[ %-20.20s ] | \033[0;31mERROR: %s\033[0m"      // Printed string 
+			"\033[%zuA",                               // Move up
+			TaskIndex,
+			HeaderPath.stem().string().c_str(),
+			std::current_exception().__cxa_exception_type()->name(),
+			TaskIndex
+		);
+		return false;
 	}
 
-	return false;
+	std::printf(
+		"\033[%zuB"                      // Move Down
+		"\033[2K"                        // Clear line
+		"\r"                             // Return to left
+		"[ %-20.20s ] | \033[0;32mDONE \033[0m"   // Printed string 
+		"\033[%zuA",                     // Move up
+		TaskIndex,
+		HeaderPath.stem().string().c_str(),
+		TaskIndex
+	);
+	return Result;
 }
 
 void HexDump(const char* Description, const void* Data, std::size_t Size)
