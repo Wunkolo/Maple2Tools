@@ -400,7 +400,7 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 	}
 	}
 
-	return true;
+	return false;
 }
 
 void HexDump(const char* Description, const void* Data, std::size_t Size)
