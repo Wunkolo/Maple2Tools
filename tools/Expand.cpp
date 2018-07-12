@@ -128,8 +128,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %ls\n",
-			HeaderPath.wstring().c_str()
+			"Error opening file for reading: %s\n",
+			HeaderPath.string().c_str()
 		);
 		return false;
 	}
@@ -145,7 +145,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
 
 	std::printf(
-		"File: %ls\n"
+		"File: %s\n"
 		"Magic: %x ( `%.4s` )\n"
 		"FATCompressedSize: %zx ( %zu )\n"
 		"FATEncodedSize: %zx ( %zu )\n"
@@ -155,7 +155,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		"TotalFiles: %zx ( %zu )\n"
 		"FATSize: %zx ( %zu )\n"
 		"\n",
-		HeaderPath.wstring().c_str(),
+		HeaderPath.string().c_str(),
 		static_cast<std::uint32_t>(Magic),
 		reinterpret_cast<const char*>(&Magic),
 		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
@@ -256,8 +256,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	const fs::path DataPath = fs::path(HeaderPath).replace_extension(".m2d");
 
 	std::printf(
-		"Processing data file: %ls\n",
-		DataPath.wstring().c_str()
+		"Processing data file: %s\n",
+		DataPath.string().c_str()
 	);
 
 	std::ifstream DataFile;
@@ -270,8 +270,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %ls\n",
-			DataPath.wstring().c_str()
+			"Error opening file for reading: %s\n",
+			DataPath.string().c_str()
 		);
 		return false;
 	}
@@ -324,11 +324,11 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath)
 		);
 
 		std::printf(
-			"[ %ls ]: %ls\n",
-			HeaderPath.stem().wstring().c_str(),
+			"[ %s ]: %s\n",
+			HeaderPath.stem().string().c_str(),
 			(
 				DestPath / fs::path(FileListEntries.at(i + 1))
-			).wstring().c_str()
+			).string().c_str()
 		);
 		std::ofstream DumpFile;
 		DumpFile.open(
@@ -359,8 +359,8 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath)
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %ls\n",
-			HeaderPath.wstring().c_str()
+			"Error opening file for reading: %s\n",
+			HeaderPath.string().c_str()
 		);
 		return false;
 	}

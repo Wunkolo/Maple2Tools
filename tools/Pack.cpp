@@ -94,8 +94,8 @@ bool MakePackFile(
 		}
 		++StreamHeader.TotalFiles;
 		const fs::path RelativePath = fs::path(
-			CurPath.wstring().substr(
-				TargetFolder.wstring().size() + 1
+			CurPath.string().substr(
+				TargetFolder.string().size() + 1
 			)
 		);
 
@@ -200,8 +200,8 @@ bool PackFolder(
 	if( !fs::exists(TargetFolder) )
 	{
 		std::printf(
-			"Folder \"%ls\" does not exist\n",
-			TargetFolder.wstring().c_str()
+			"Folder \"%s\" does not exist\n",
+			TargetFolder.string().c_str()
 		);
 		return false;
 	}
@@ -209,8 +209,8 @@ bool PackFolder(
 	if( !fs::is_directory(TargetFolder) )
 	{
 		std::printf(
-			"\"%ls\" is not a folder\n",
-			TargetFolder.wstring().c_str()
+			"\"%s\" is not a folder\n",
+			TargetFolder.string().c_str()
 		);
 		return false;
 	}
@@ -219,36 +219,36 @@ bool PackFolder(
 
 	std::ofstream HeaderFile;
 	HeaderFile.open(
-		TargetFile.replace_extension(L".m2h"),
+		TargetFile.replace_extension(".m2h"),
 		std::ios::binary | std::ios::trunc
 	);
 	std::printf(
-		"Creating header file: %ls\n",
-		TargetFile.wstring().c_str()
+		"Creating header file: %s\n",
+		TargetFile.string().c_str()
 	);
 	if( !HeaderFile.good() )
 	{
 		std::printf(
-			"Error creating file: %ls\n",
-			TargetFile.wstring().c_str()
+			"Error creating file: %s\n",
+			TargetFile.string().c_str()
 		);
 		return false;
 	}
 
 	std::ofstream DataFile;
 	DataFile.open(
-		TargetFile.replace_extension(L".m2d"),
+		TargetFile.replace_extension(".m2d"),
 		std::ios::binary | std::ios::trunc
 	);
 	std::printf(
-		"Creating data file: %ls\n",
-		TargetFile.wstring().c_str()
+		"Creating data file: %s\n",
+		TargetFile.string().c_str()
 	);
 	if( !DataFile.good() )
 	{
 		std::printf(
-			"Error creating file: %ls\n",
-			TargetFile.wstring().c_str()
+			"Error creating file: %s\n",
+			TargetFile.string().c_str()
 		);
 		return false;
 	}
