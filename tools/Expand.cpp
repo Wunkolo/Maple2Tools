@@ -416,7 +416,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 			"\033[%zuB"                         // Move Down
 			"\033[2K"                           // Clear line
 			"\r"                                // Return to left
-			"[ %-20.20s ] | \033[1;37m%6.2f%%\033[0m \033[0;34m%-60.60s\033[0m"   // Printed string 
+			"[ %-20.20s ] | \033[1;37m%6.2f%%\033[0m \033[1;34m%-60.60s\033[0m"   // Printed string 
 			"\033[%zuA",                        // Move up
 			TaskIndex,
 			HeaderPath.stem().string().c_str(), // PackFile
