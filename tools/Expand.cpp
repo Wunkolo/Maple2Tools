@@ -34,18 +34,20 @@ void HexDump(const char* Description, const void* Data, std::size_t Size);
 
 int main(int argc, char* argv[])
 {
-	std::string ShadowOption;
+	std::string ShadowOption = "sym";
 	fs::path SourcePath;
 	fs::path DestPath;
+	bool ShowHelp = false;
 	auto CommandParser = 
+		clara::Help( ShowHelp ) |
 		clara::Arg( SourcePath, "Source path" )
-		("Source path to flatten").required() |
-		clara::Arg( DestPath, "Dest path" )
+		("Source path to expand").required() |
+		clara::Arg( DestPath, "Destination path" )
 		("Destination path that will contain the dumped source folder").required() |
 		clara::Opt( [&]
 			(std::string String)
 			{
-				if( std::regex_match(String,std::regex("^(sym|hard|copy|none)$")) )
+				if( std::regex_match(String,std::regex("^(none|sym|hard|copy)$")) )
 				{
 					ShadowOption = String;
 					return clara::ParserResult::ok(clara::ParseResultType::Matched);
@@ -54,14 +56,14 @@ int main(int argc, char* argv[])
 				{
 					return clara::ParserResult::runtimeError("Invalid shadow option");
 				}
-			}, "sym|hard|copy|none")
+			}, "none|sym|hard|copy")
 		["-s"]["--shadow"]
 		(
-			"Determines how the original files will be recreated in the dump\n"
-			"sym  - Creates symbolic links in the dump folder\n"
+			"Determines how the original files will be recreated in the dump\n\n"
+			"none - No shadowing\n"
+			"sym  - Creates symbolic links in the dump folder(default)\n"
 			"hard - Creates hard links in the dump folder\n"
 			"copy - Copies the original file into the dump folder\n"
-			"none - No shadowing\n"
 		);
 	auto Result = CommandParser.parse( clara::Args( argc, argv ) );
 	if( !Result )
@@ -70,8 +72,13 @@ int main(int argc, char* argv[])
 			"Error parsing command line: %s\n",
 			Result.errorMessage().c_str()
 		);
-		std::cout << CommandParser;
+		CommandParser.writeToStream(std::cout);
 		return EXIT_FAILURE;
+	}
+	else if( ShowHelp || argc < 3 )
+	{
+		CommandParser.writeToStream(std::cout);
+		return EXIT_SUCCESS;
 	}
 	std::puts(
 		"MapleStory2 Filesystem expander:\n"
@@ -80,10 +87,9 @@ int main(int argc, char* argv[])
 		"Build Date: " __TIMESTAMP__ "\n"
 		"\t- wunkolo <wunkolo@gmail.com>"
 	);
-
 	fs::create_directory(DestPath);
 
-	if( !fs::exists(SourcePath) )
+	if( !fs::exists(SourcePath) || !fs::exists(DestPath) )
 	{
 		std::puts("Invalid source/dest paths");
 		return EXIT_FAILURE;
@@ -97,36 +103,57 @@ int main(int argc, char* argv[])
 		{
 			const fs::path& CurSource = CurEntry.path();
 			const fs::path CurDest = DestPath / CurEntry.path();
-			fs::create_directories(CurDest.parent_path());
 
-			// Create symlink to original files
+			// Create shadow original files
 			try
 			{
-				if( ShadowOption == "sym" )
+				// TODO: Enum this, or something
+				// Allow overwrite
+				fs::remove(CurDest);
+				switch( ShadowOption[0] )
 				{
+				case 's': // sym
+				{
+					fs::create_directories(CurDest.parent_path());
 					fs::create_symlink(
 						fs::absolute(CurSource),
 						CurDest
 					);
+					break;
 				}
-				else if( ShadowOption == "hard" )
+				case 'h': // hard
 				{
+					fs::create_directories(CurDest.parent_path());
 					fs::create_hard_link(
 						fs::absolute(CurSource),
 						CurDest
 					);
+					break;
 				}
-				else if( ShadowOption == "copy" )
+				case 'c': // copy
 				{
+					fs::create_directories(CurDest.parent_path());
 					fs::copy_file(
 						fs::absolute(CurSource),
 						CurDest,
 						fs::copy_options::overwrite_existing
 					);
+					break;
+				}
+				default: // none
+				{
+					break;
+				}
 				}
 			}
-			catch( fs::filesystem_error& )
+			catch( fs::filesystem_error& Exception)
 			{
+				std::printf(
+					"Failed to create shadow file (%s):\n%s\n",
+					CurSource.c_str(),
+					Exception.what()
+				);
+				continue;
 			}
 
 			// Process Header files
@@ -136,6 +163,7 @@ int main(int argc, char* argv[])
 				// std::cout << CurSource << std::endl;
 				// std::cout << CurExpansion << std::endl;
 
+				fs::create_directories(CurDest.parent_path());
 				// Process .m2h into new folder of the same name
 				fs::create_directory(CurExpansion);
 				const auto ThreadProc = []
