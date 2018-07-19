@@ -16,6 +16,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 ### Global includes
 include_directories(
 	include
+	dependencies/Clara/include
 )
 
 ### Optimizations

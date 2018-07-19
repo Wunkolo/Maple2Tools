@@ -11,6 +11,10 @@
 #include <map>
 #include <thread>
 #include <future>
+#include <regex>
+
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 
 #ifdef __unix__
 #include <unistd.h>
@@ -19,8 +23,7 @@
 #endif
 #endif
 
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+#include <clara.hpp>
 
 #include <Maple2/Maple2.hpp>
 #include <Util/File.hpp>
@@ -31,22 +34,53 @@ void HexDump(const char* Description, const void* Data, std::size_t Size);
 
 int main(int argc, char* argv[])
 {
+	std::string ShadowOption;
+	fs::path SourcePath;
+	fs::path DestPath;
+	auto CommandParser = 
+		clara::Arg( SourcePath, "Source path" )
+		("Source path to flatten").required() |
+		clara::Arg( DestPath, "Dest path" )
+		("Destination path that will contain the dumped source folder").required() |
+		clara::Opt( [&]
+			(std::string String)
+			{
+				if( std::regex_match(String,std::regex("^(sym|hard|copy|none)$")) )
+				{
+					ShadowOption = String;
+					return clara::ParserResult::ok(clara::ParseResultType::Matched);
+				}
+				else
+				{
+					return clara::ParserResult::runtimeError("Invalid shadow option");
+				}
+			}, "sym|hard|copy|none")
+		["-s"]["--shadow"]
+		(
+			"Determines how the original files will be recreated in the dump\n"
+			"sym  - Creates symbolic links in the dump folder\n"
+			"hard - Creates hard links in the dump folder\n"
+			"copy - Copies the original file into the dump folder\n"
+			"none - No shadowing\n"
+		);
+	auto Result = CommandParser.parse( clara::Args( argc, argv ) );
+	if( !Result )
+	{
+		std::printf(
+			"Error parsing command line: %s\n",
+			Result.errorMessage().c_str()
+		);
+		std::cout << CommandParser;
+		return EXIT_FAILURE;
+	}
 	std::puts(
 		"MapleStory2 Filesystem expander:\n"
 		"\t\"Flattens\" a filesystem, expanding all m2h/m2d files it encounters\n"
 		"\tinto a folder of the same name\n"
 		"Build Date: " __TIMESTAMP__ "\n"
-		"\t- wunkolo <wunkolo@gmail.com>\n"
-		"Usage: Expand (Source) (Dest)\n"
+		"\t- wunkolo <wunkolo@gmail.com>"
 	);
-	if( argc < 3 )
-	{
-		std::puts("No argument given");
-		return EXIT_FAILURE;
-	}
 
-	const fs::path SourcePath(argv[1]);
-	const fs::path DestPath(argv[2]);
 	fs::create_directory(DestPath);
 
 	if( !fs::exists(SourcePath) )
@@ -68,10 +102,28 @@ int main(int argc, char* argv[])
 			// Create symlink to original files
 			try
 			{
-				fs::create_symlink(
-					fs::absolute(CurSource),
-					CurDest
-				);
+				if( ShadowOption == "sym" )
+				{
+					fs::create_symlink(
+						fs::absolute(CurSource),
+						CurDest
+					);
+				}
+				else if( ShadowOption == "hard" )
+				{
+					fs::create_hard_link(
+						fs::absolute(CurSource),
+						CurDest
+					);
+				}
+				else if( ShadowOption == "copy" )
+				{
+					fs::copy_file(
+						fs::absolute(CurSource),
+						CurDest,
+						fs::copy_options::overwrite_existing
+					);
+				}
 			}
 			catch( fs::filesystem_error& )
 			{

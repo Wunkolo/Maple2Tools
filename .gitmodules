@@ -1,0 +1,3 @@
+[submodule "dependencies/Clara"]
+	path = dependencies/Clara
+	url = https://github.com/catchorg/Clara.git
