@@ -160,8 +160,6 @@ int main(int argc, char* argv[])
 			if( CurSource.extension() == ".m2h" )
 			{
 				const fs::path CurExpansion = CurDest.parent_path() / CurDest.stem();
-				// std::cout << CurSource << std::endl;
-				// std::cout << CurExpansion << std::endl;
 
 				fs::create_directories(CurDest.parent_path());
 				// Process .m2h into new folder of the same name
@@ -413,15 +411,15 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		);
 
 		std::printf(
-			"\033[%zuB"                         // Move Down
-			"\033[2K"                           // Clear line
-			"\r"                                // Return to left
+			"\033[%zuB"                                                           // Move Down
+			"\033[2K"                                                             // Clear line
+			"\r"                                                                  // Return to left
 			"[ %-20.20s ] | \033[1;37m%6.2f%%\033[0m \033[1;34m%-60.60s\033[0m"   // Printed string 
-			"\033[%zuA",                        // Move up
+			"\033[%zuA",                                                          // Move up
 			TaskIndex,
-			HeaderPath.stem().string().c_str(), // PackFile
-			(static_cast<float>(i + 1) / FATable.size()) * 100.0f,// Percentage
-			fs::path(FileListEntries.at(i + 1)).string().c_str(), // Current file
+			HeaderPath.stem().string().c_str(),                                   // PackFile
+			(static_cast<float>(i + 1) / FATable.size()) * 100.0f,                // Percentage
+			fs::path(FileListEntries.at(i + 1)).string().c_str(),                 // Current file
 			TaskIndex
 		);
 		std::ofstream DumpFile;
@@ -507,11 +505,11 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t Tas
 	catch(...)
 	{
 		std::printf(
-			"\033[%zuB"                                // Move Down
-			"\033[2K"                                  // Clear line
-			"\r"                                       // Return to left
+			"\033[%zuB"                                      // Move Down
+			"\033[2K"                                        // Clear line
+			"\r"                                             // Return to left
 			"[ %-20.20s ] | \033[0;31mERROR: %s\033[0m"      // Printed string 
-			"\033[%zuA",                               // Move up
+			"\033[%zuA",                                     // Move up
 			TaskIndex,
 			HeaderPath.stem().string().c_str(),
 			std::current_exception().__cxa_exception_type()->name(),
@@ -521,11 +519,11 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t Tas
 	}
 
 	std::printf(
-		"\033[%zuB"                      // Move Down
-		"\033[2K"                        // Clear line
-		"\r"                             // Return to left
+		"\033[%zuB"                               // Move Down
+		"\033[2K"                                 // Clear line
+		"\r"                                      // Return to left
 		"[ %-20.20s ] | \033[0;32mDONE \033[0m"   // Printed string 
-		"\033[%zuA",                     // Move up
+		"\033[%zuA",                              // Move up
 		TaskIndex,
 		HeaderPath.stem().string().c_str(),
 		TaskIndex
