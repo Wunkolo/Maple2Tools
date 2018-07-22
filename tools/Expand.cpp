@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
 		CurTasks.get();
 	}
 	std::printf(
-		"\033[%zuB",
+		"\033[%zuB\n",
 		TaskIndex + 1
 	);
 	return EXIT_SUCCESS;
@@ -228,6 +228,16 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		return false;
 	}
 
+	std::printf(
+		"\033[%zuB"                                             // Move Down
+		"\033[2K"                                               // Clear line
+		"\r"                                                    // Return to left
+		"[ %-20.20s ] | \033[0;33mParsing file list... \033[0m" // Printed string 
+		"\033[%zuA",                                            // Move up
+		TaskIndex,
+		HeaderPath.stem().string().c_str(),
+		TaskIndex
+	);
 	typename PackTraits::StreamType StreamHeader = {};
 	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
 
