@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::vector<std::future<bool> > Tasks;
-	std::size_t TaskIndex = 0;
+	std::size_t TaskIndex = 1;
 	for( const auto& CurEntry : fs::recursive_directory_iterator(SourcePath) )
 	{
 		if( fs::is_regular_file(CurEntry) )
