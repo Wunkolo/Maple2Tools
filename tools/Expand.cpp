@@ -206,13 +206,12 @@ int main(int argc, char* argv[])
 template< typename PackTraits >
 bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t TaskIndex)
 {
-	std::ifstream HeaderFile;
-	HeaderFile.open(
-		HeaderPath,
-		std::ios::binary
+	mio::mmap_source HeaderFile(
+		HeaderPath.c_str(),
+		0,
+		mio::map_entire_file
 	);
-
-	if( !HeaderFile.good() )
+	if( !HeaderFile.is_open() )
 	{
 		// Error opening file
 		std::printf(
@@ -222,7 +221,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		return false;
 	}
 
-	const Maple2::Identifier Magic = Util::Read<Maple2::Identifier>(HeaderFile);
+	const Maple2::Identifier Magic
+		= *reinterpret_cast<const typename Maple2::Identifier*>(HeaderFile.begin());
 	if( Magic != PackTraits::Magic )
 	{
 		// Invalid magic
@@ -239,62 +239,53 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		HeaderPath.stem().string().c_str(),
 		TaskIndex
 	);
-	typename PackTraits::StreamType StreamHeader = {};
-	StreamHeader = Util::Read<typename PackTraits::StreamType>(HeaderFile);
+	typename PackTraits::StreamType StreamHeader
+		= *reinterpret_cast<const typename PackTraits::StreamType*>(HeaderFile.begin() + 4);
 
-	// std::printf(
-	// 	"File: %s\n"
-	// 	"Magic: %x ( `%.4s` )\n"
-	// 	"FATCompressedSize: %zx ( %zu )\n"
-	// 	"FATEncodedSize: %zx ( %zu )\n"
-	// 	"FileListSize: %zx ( %zu )\n"
-	// 	"FileListCompressedSize: %zx ( %zu )\n"
-	// 	"FileListEncodedSize: %zx ( %zu )\n"
-	// 	"TotalFiles: %zx ( %zu )\n"
-	// 	"FATSize: %zx ( %zu )\n"
-	// 	"\n",
-	// 	HeaderPath.string().c_str(),
-	// 	static_cast<std::uint32_t>(Magic),
-	// 	reinterpret_cast<const char*>(&Magic),
-	// 	static_cast<std::size_t>(StreamHeader.FATCompressedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FATCompressedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FATEncodedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FATEncodedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FileListSize),
-	// 	static_cast<std::size_t>(StreamHeader.FileListSize),
-	// 	static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
-	// 	static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
-	// 	static_cast<std::size_t>(StreamHeader.TotalFiles),
-	// 	static_cast<std::size_t>(StreamHeader.TotalFiles),
-	// 	static_cast<std::size_t>(StreamHeader.FATSize),
-	// 	static_cast<std::size_t>(StreamHeader.FATSize)
-	// );
+	std::printf(
+		"File: %s\n"
+		"Magic: %x ( `%.4s` )\n"
+		"FATCompressedSize: %zx ( %zu )\n"
+		"FATEncodedSize: %zx ( %zu )\n"
+		"FileListSize: %zx ( %zu )\n"
+		"FileListCompressedSize: %zx ( %zu )\n"
+		"FileListEncodedSize: %zx ( %zu )\n"
+		"TotalFiles: %zx ( %zu )\n"
+		"FATSize: %zx ( %zu )\n"
+		"\n",
+		HeaderPath.string().c_str(),
+		static_cast<std::uint32_t>(Magic),
+		reinterpret_cast<const char*>(&Magic),
+		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FATCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
+		static_cast<std::size_t>(StreamHeader.FATEncodedSize),
+		static_cast<std::size_t>(StreamHeader.FileListSize),
+		static_cast<std::size_t>(StreamHeader.FileListSize),
+		static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FileListCompressedSize),
+		static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
+		static_cast<std::size_t>(StreamHeader.FileListEncodedSize),
+		static_cast<std::size_t>(StreamHeader.TotalFiles),
+		static_cast<std::size_t>(StreamHeader.TotalFiles),
+		static_cast<std::size_t>(StreamHeader.FATSize),
+		static_cast<std::size_t>(StreamHeader.FATSize)
+	);
 
 	////////////////////////////////////////////////////////////////////////////
 	// FileList
-	std::string FileListEncoded;
-	FileListEncoded.resize(StreamHeader.FileListEncodedSize);
-	HeaderFile.seekg(
-		4 + sizeof(typename PackTraits::StreamType),
-		std::ios::beg
-	);
-	HeaderFile.read(
-		FileListEncoded.data(),
-		StreamHeader.FileListEncodedSize
-	);
 
 	// HexDump(
 	// 	"FileList Cipher",
 	// 	FileList.data(),
 	// 	std::min<std::size_t>( FileList.size(), 256 )
 	// );
+	
 	std::string FileList;
 	FileList.resize(StreamHeader.FileListSize);
 	Maple2::Util::DecryptStream(
-		FileListEncoded.data(),
-		FileListEncoded.size(),
+		HeaderFile.begin() + 4 + sizeof(typename PackTraits::StreamType),
+		StreamHeader.FileListEncodedSize,
 		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % 128],
 		FileList.data(),
@@ -314,13 +305,6 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
 	// std::puts("Reading FAT Table");
-	std::string FileAllocationTableEncoded;
-	FileAllocationTableEncoded.resize(StreamHeader.FATEncodedSize);
-	HeaderFile.read(
-		FileAllocationTableEncoded.data(),
-		StreamHeader.FATEncodedSize
-	);
-	HeaderFile.close();
 	// HexDump(
 	// 	"FAT Cipher",
 	// 	FileAllocationTable.data(),
@@ -330,7 +314,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	std::vector<typename PackTraits::FileHeaderType> FATable;
 	FATable.resize(StreamHeader.TotalFiles);
 	Maple2::Util::DecryptStream(
-		FileAllocationTableEncoded.data(),
+		HeaderFile.begin() + 4 + sizeof(typename PackTraits::StreamType) + StreamHeader.FileListEncodedSize,
 		StreamHeader.FATEncodedSize,
 		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
@@ -339,6 +323,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		StreamHeader.FATSize != StreamHeader.FATCompressedSize
 	);
 
+	HeaderFile.unmap();
 	// HexDump(
 	// 	"File Allocation Table",
 	// 	FATable.data(),
