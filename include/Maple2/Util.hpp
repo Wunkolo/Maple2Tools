@@ -33,10 +33,13 @@ std::tuple<
 	bool Compress = true
 );
 
-std::string DecryptStream(
-	const std::string& Encoded,
+void DecryptStream(
+	const void* Encoded,
+	std::size_t EncodedSize,
 	const std::uint8_t IV[16],
 	const std::uint8_t Key[32],
+	void* Decoded,
+	std::size_t DecodedSize,
 	bool Compressed = false
 );
 

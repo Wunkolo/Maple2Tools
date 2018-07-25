@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
 		return EXIT_FAILURE;
 	}
 
-	std::vector<std::future<bool> > Tasks;
+	std::vector< std::future<bool> > Tasks;
 	std::size_t TaskIndex = 1;
 	for( const auto& CurEntry : fs::recursive_directory_iterator(SourcePath) )
 	{
@@ -273,14 +273,14 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 
 	////////////////////////////////////////////////////////////////////////////
 	// FileList
-	std::string FileList;
-	FileList.resize(StreamHeader.FileListEncodedSize);
+	std::string FileListEncoded;
+	FileListEncoded.resize(StreamHeader.FileListEncodedSize);
 	HeaderFile.seekg(
 		4 + sizeof(typename PackTraits::StreamType),
 		std::ios::beg
 	);
 	HeaderFile.read(
-		FileList.data(),
+		FileListEncoded.data(),
 		StreamHeader.FileListEncodedSize
 	);
 
@@ -289,11 +289,15 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	// 	FileList.data(),
 	// 	std::min<std::size_t>( FileList.size(), 256 )
 	// );
-
-	FileList = Maple2::Util::DecryptStream(
-		FileList,
+	std::string FileList;
+	FileList.resize(StreamHeader.FileListSize);
+	Maple2::Util::DecryptStream(
+		FileListEncoded.data(),
+		FileListEncoded.size(),
 		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % 128],
+		FileList.data(),
+		StreamHeader.FileListSize,
 		StreamHeader.FileListSize != StreamHeader.FileListCompressedSize
 	);
 
@@ -309,32 +313,29 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
 	// std::puts("Reading FAT Table");
-	std::string FileAllocationTable;
-	FileAllocationTable.resize(StreamHeader.FATEncodedSize);
+	std::string FileAllocationTableEncoded;
+	FileAllocationTableEncoded.resize(StreamHeader.FATEncodedSize);
 	HeaderFile.read(
-		FileAllocationTable.data(),
+		FileAllocationTableEncoded.data(),
 		StreamHeader.FATEncodedSize
 	);
-
+	HeaderFile.close();
 	// HexDump(
 	// 	"FAT Cipher",
 	// 	FileAllocationTable.data(),
 	// 	std::min<std::size_t>( FileAllocationTable.size(), 256 )
 	// );
 
-	FileAllocationTable = Maple2::Util::DecryptStream(
-		FileAllocationTable,
-		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
-		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
-		StreamHeader.FATSize != StreamHeader.FATCompressedSize
-	);
-
 	std::vector<typename PackTraits::FileHeaderType> FATable;
 	FATable.resize(StreamHeader.TotalFiles);
-	std::memcpy(
+	Maple2::Util::DecryptStream(
+		FileAllocationTableEncoded.data(),
+		StreamHeader.FATEncodedSize,
+		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
+		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
 		FATable.data(),
-		FileAllocationTable.data(),
-		FileAllocationTable.size()
+		StreamHeader.TotalFiles * sizeof(typename PackTraits::FileHeaderType),
+		StreamHeader.FATSize != StreamHeader.FATCompressedSize
 	);
 
 	// HexDump(
@@ -346,7 +347,6 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	// 	)
 	// );
 
-	HeaderFile.close();
 
 	////////////////////////////////////////////////////////////////////////////
 	// Process data file
@@ -372,8 +372,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		);
 		return false;
 	}
-
-	for( std::size_t i = 0; i < FATable.size(); ++i )
+	for( std::size_t i = 0; i < StreamHeader.TotalFiles; ++i )
 	{
 		// std::printf(
 		// 	"FileName: %s\n"
@@ -390,11 +389,11 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		// 	FATable[i].Size
 		// );
 
-		std::string FileData;
-		FileData.resize(FATable[i].EncodedSize);
+		std::string FileDataEncoded;
+		FileDataEncoded.resize(FATable[i].EncodedSize);
 		DataFile.seekg(FATable[i].Offset);
 		DataFile.read(
-			FileData.data(),
+			FileDataEncoded.data(),
 			FATable[i].EncodedSize
 		);
 
@@ -403,10 +402,15 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		// 	FileData.c_str()
 		// );
 
-		FileData = Maple2::Util::DecryptStream(
-			FileData,
+		std::string FileData;
+		FileData.resize(FATable[i].Size);
+		Maple2::Util::DecryptStream(
+			FileDataEncoded.data(),
+			FileDataEncoded.size(),
 			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
 			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
+			FileData.data(),
+			FileData.size(),
 			FATable[i].Size != FATable[i].CompressedSize
 		);
 
@@ -472,45 +476,45 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t Tas
 	bool Result = false;
 	try
 	{
-	switch( Magic )
-	{
-	case Maple2::Identifier::MS2F:
-	{
-		Result = DumpPackStream<Maple2::PackTraits::MS2F>(
-			HeaderPath,
-			DestPath,
-			TaskIndex
-		);
-		break;
-	}
-	case Maple2::Identifier::NS2F:
-	{
-		Result = DumpPackStream<Maple2::PackTraits::NS2F>(
-			HeaderPath,
-			DestPath,
-			TaskIndex
-		);
-		break;
-	}
-	case Maple2::Identifier::OS2F:
-	{
-		Result = DumpPackStream<Maple2::PackTraits::OS2F>(
-			HeaderPath,
-			DestPath,
-			TaskIndex
-		);
-		break;
-	}
-	case Maple2::Identifier::PS2F:
-	{
-		Result = DumpPackStream<Maple2::PackTraits::PS2F>(
-			HeaderPath,
-			DestPath,
-			TaskIndex
-		);
-		break;
-	}
-	}
+		switch( Magic )
+		{
+		case Maple2::Identifier::MS2F:
+		{
+			Result = DumpPackStream<Maple2::PackTraits::MS2F>(
+				HeaderPath,
+				DestPath,
+				TaskIndex
+			);
+			break;
+		}
+		case Maple2::Identifier::NS2F:
+		{
+			Result = DumpPackStream<Maple2::PackTraits::NS2F>(
+				HeaderPath,
+				DestPath,
+				TaskIndex
+			);
+			break;
+		}
+		case Maple2::Identifier::OS2F:
+		{
+			Result = DumpPackStream<Maple2::PackTraits::OS2F>(
+				HeaderPath,
+				DestPath,
+				TaskIndex
+			);
+			break;
+		}
+		case Maple2::Identifier::PS2F:
+		{
+			Result = DumpPackStream<Maple2::PackTraits::PS2F>(
+				HeaderPath,
+				DestPath,
+				TaskIndex
+			);
+			break;
+		}
+		}
 	}
 	catch(...)
 	{

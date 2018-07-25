@@ -167,29 +167,34 @@ std::tuple<
 	);
 }
 
-std::string DecryptStream(
-	const std::string& Encoded,
+void DecryptStream(
+	const void* Encoded,
+	std::size_t EncodedSize,
 	const std::uint8_t IV[16],
 	const std::uint8_t Key[32],
+	void* Decoded,
+	std::size_t DecodedSize,
 	bool Compressed
 )
 {
-	std::string Decrypted;
-
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
 	Decryptor.SetKeyWithIV(Key, 32, IV);
 
 	// Decrypt: Cipher -> Base64 -> AES -> ZLib -> Data
 	if( Compressed )
 	{
-		CryptoPP::StringSource(
-			Encoded,
+		CryptoPP::ArraySource(
+			static_cast<const CryptoPP::byte*>(Encoded),
+			EncodedSize,
 			true,
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					Decryptor,
 					new CryptoPP::ZlibDecompressor(
-						new CryptoPP::StringSink(Decrypted)
+						new CryptoPP::ArraySink(
+							static_cast<CryptoPP::byte*>(Decoded),
+							DecodedSize
+						)
 					)
 				)
 			)
@@ -197,19 +202,21 @@ std::string DecryptStream(
 	}
 	else
 	{
-		CryptoPP::StringSource(
-			Encoded,
+		CryptoPP::ArraySource(
+			static_cast<const CryptoPP::byte*>(Encoded),
+			EncodedSize,
 			true,
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					Decryptor,
-					new CryptoPP::StringSink(Decrypted)
+						new CryptoPP::ArraySink(
+							static_cast<CryptoPP::byte*>(Decoded),
+							DecodedSize
+						)
 				)
 			)
 		);
 	}
-
-	return Decrypted;
 }
 
 std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
