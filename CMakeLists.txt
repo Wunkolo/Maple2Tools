@@ -17,6 +17,7 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 include_directories(
 	include
 	dependencies/Clara/include
+	dependencies/mio/include
 )
 
 ### Optimizations

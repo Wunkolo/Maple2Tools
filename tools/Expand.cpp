@@ -24,6 +24,7 @@ namespace fs = std::experimental::filesystem;
 #endif
 
 #include <clara.hpp>
+#include <mio/mmap.hpp>
 
 #include <Maple2/Maple2.hpp>
 #include <Util/File.hpp>
@@ -357,13 +358,13 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	// 	DataPath.string().c_str()
 	// );
 
-	std::ifstream DataFile;
-	DataFile.open(
-		DataPath,
-		std::ios::binary
+	mio::mmap_source DataFile(
+		DataPath.c_str(),
+		0,
+		mio::map_entire_file
 	);
 
-	if( !DataFile.good() )
+	if( !DataFile.is_open() )
 	{
 		// Error opening file
 		std::printf(
@@ -389,14 +390,6 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		// 	FATable[i].Size
 		// );
 
-		std::string FileDataEncoded;
-		FileDataEncoded.resize(FATable[i].EncodedSize);
-		DataFile.seekg(FATable[i].Offset);
-		DataFile.read(
-			FileDataEncoded.data(),
-			FATable[i].EncodedSize
-		);
-
 		// std::printf(
 		// 	"Data Stream: %.128s...\n",
 		// 	FileData.c_str()
@@ -405,8 +398,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		std::string FileData;
 		FileData.resize(FATable[i].Size);
 		Maple2::Util::DecryptStream(
-			FileDataEncoded.data(),
-			FileDataEncoded.size(),
+			DataFile.begin() + FATable[i].Offset,
+			FATable[i].EncodedSize,
 			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
 			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
 			FileData.data(),
@@ -448,6 +441,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		);
 		DumpFile.close();
 	}
+
+	DataFile.unmap();
 
 	return true;
 }
