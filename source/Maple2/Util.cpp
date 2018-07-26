@@ -209,10 +209,10 @@ void DecryptStream(
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					Decryptor,
-						new CryptoPP::ArraySink(
-							static_cast<CryptoPP::byte*>(Decoded),
-							DecodedSize
-						)
+					new CryptoPP::ArraySink(
+						static_cast<CryptoPP::byte*>(Decoded),
+						DecodedSize
+					)
 				)
 			)
 		);
@@ -226,8 +226,8 @@ std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
 	static const std::regex RegExNewline("[\r\n]+");
 
 	std::sregex_token_iterator TokenIter(
-		FileList.begin(),
-		FileList.end(),
+		FileList.cbegin(),
+		FileList.cend(),
 		RegExNewline,
 		-1
 	);
@@ -236,8 +236,8 @@ std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
 
 	for( ; TokenIter != TokenEnd; ++TokenIter )
 	{
-		const std::string CurFileLine = (*TokenIter).str();
-		const fs::path HeaderFileIndex = CurFileLine.substr(
+		const std::string CurFileLine = *TokenIter;
+		const std::string HeaderFileIndex = CurFileLine.substr(
 			0,
 			CurFileLine.find_first_of(',')
 		);
