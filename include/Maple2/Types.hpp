@@ -36,11 +36,11 @@ public:
 
 	std::uint64_t FATCompressedSize;      // DEFLATE length
 	std::uint64_t FATEncodedSize;         // Base64 length
-	std::uint64_t FATSize;                // Uncompressed size
+	std::uint64_t FileListSize;           // Uncompressed size
 
 	std::uint64_t FileListCompressedSize; // DEFLATE length
 	std::uint64_t FileListEncodedSize;    // Base64 length
-	std::uint64_t FileListSize;           // Uncompressed size
+	std::uint64_t FATSize;                // Uncompressed size
 };
 static_assert(
 	sizeof(PackStreamVer2) == 0x34,
