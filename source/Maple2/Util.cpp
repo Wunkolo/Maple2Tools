@@ -1,5 +1,6 @@
 #include <Maple2/Util.hpp>
 
+#include <fstream>
 #include <regex>
 
 #include <cryptopp/files.h>
@@ -212,6 +213,55 @@ void DecryptStream(
 					new CryptoPP::ArraySink(
 						static_cast<CryptoPP::byte*>(Decoded),
 						DecodedSize
+					)
+				)
+			)
+		);
+	}
+}
+
+void DecryptStreamToStream(
+	const void* Encoded,
+	std::size_t EncodedSize,
+	const std::uint8_t IV[16],
+	const std::uint8_t Key[32],
+	std::ostream& OutputStream,
+	bool Compressed
+)
+{
+	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
+	Decryptor.SetKeyWithIV(Key, 32, IV);
+
+	// Decrypt: Cipher -> Base64 -> AES -> ZLib -> Data
+	if( Compressed )
+	{
+		CryptoPP::ArraySource(
+			static_cast<const CryptoPP::byte*>(Encoded),
+			EncodedSize,
+			true,
+			new CryptoPP::Base64Decoder(
+				new CryptoPP::StreamTransformationFilter(
+					Decryptor,
+					new CryptoPP::ZlibDecompressor(
+						new CryptoPP::FileSink(
+							OutputStream
+						)
+					)
+				)
+			)
+		);
+	}
+	else
+	{
+		CryptoPP::ArraySource(
+			static_cast<const CryptoPP::byte*>(Encoded),
+			EncodedSize,
+			true,
+			new CryptoPP::Base64Decoder(
+				new CryptoPP::StreamTransformationFilter(
+					Decryptor,
+					new CryptoPP::FileSink(
+						OutputStream
 					)
 				)
 			)

@@ -304,18 +304,6 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	}
 	for( std::size_t i = 0; i < StreamHeader.TotalFiles; ++i )
 	{
-		std::string FileData;
-		FileData.resize(FATable[i].Size);
-		Maple2::Util::DecryptStream(
-			DataFile.cbegin() + FATable[i].Offset,
-			FATable[i].EncodedSize,
-			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
-			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
-			FileData.data(),
-			FileData.size(),
-			FATable[i].Size != FATable[i].CompressedSize
-		);
-
 		fs::create_directories(
 			DestPath / FileListEntries.at(i + 1).parent_path()
 		);
@@ -338,10 +326,21 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 			DestPath / FileListEntries.at(i + 1),
 			std::ios::binary
 		);
-
-		DumpFile.write(
-			FileData.data(),
-			FileData.size()
+		if( !DumpFile )
+		{
+			std::printf(
+				"Error opening file \"%s\" for writing\n",
+				(DestPath / FileListEntries.at(i + 1)).c_str()
+			);
+			return false;
+		}
+		Maple2::Util::DecryptStreamToStream(
+			DataFile.cbegin() + FATable[i].Offset,
+			FATable[i].EncodedSize,
+			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
+			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
+			DumpFile,
+			FATable[i].Size != FATable[i].CompressedSize
 		);
 		DumpFile.close();
 	}

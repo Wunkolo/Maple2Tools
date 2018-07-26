@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <string>
-#include <fstream>
+#include <iosfwd>
 #include <map>
 #include <tuple>
 #include <experimental/filesystem>
@@ -40,6 +40,15 @@ void DecryptStream(
 	const std::uint8_t Key[32],
 	void* Decoded,
 	std::size_t DecodedSize,
+	bool Compressed = false
+);
+
+void DecryptStreamToStream(
+	const void* Encoded,
+	std::size_t EncodedSize,
+	const std::uint8_t IV[16],
+	const std::uint8_t Key[32],
+	std::ostream& OutputStream,
 	bool Compressed = false
 );
 
