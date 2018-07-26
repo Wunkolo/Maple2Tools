@@ -221,8 +221,12 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		return false;
 	}
 
+	auto HeaderReadPoint = HeaderFile.cbegin();
+
 	const Maple2::Identifier Magic
-		= *reinterpret_cast<const typename Maple2::Identifier*>(HeaderFile.cbegin());
+		 = *reinterpret_cast<const typename Maple2::Identifier*>(HeaderReadPoint);
+	HeaderReadPoint += sizeof(Maple2::Identifier);
+
 	if( Magic != PackTraits::Magic )
 	{
 		// Invalid magic
@@ -236,19 +240,19 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		"[ %-20.20s ] | \033[0;33mParsing file list... \033[0m" // Printed string 
 		"\033[%zuA",                                            // Move up
 		TaskIndex,
-		HeaderPath.stem().string().c_str(),
+		HeaderPath.stem().c_str(),
 		TaskIndex
 	);
 	typename PackTraits::StreamType StreamHeader
-		= *reinterpret_cast<const typename PackTraits::StreamType*>(HeaderFile.begin() + 4);
+		= *reinterpret_cast<const typename PackTraits::StreamType*>(HeaderReadPoint);
+	HeaderReadPoint += sizeof(typename PackTraits::StreamType);
 
 	////////////////////////////////////////////////////////////////////////////
 	// FileList
-	
 	std::string FileList;
 	FileList.resize(StreamHeader.FileListSize);
 	Maple2::Util::DecryptStream(
-		HeaderFile.begin() + 4 + sizeof(typename PackTraits::StreamType),
+		HeaderReadPoint,
 		StreamHeader.FileListEncodedSize,
 		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % 128],
@@ -257,6 +261,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		StreamHeader.FileListSize != StreamHeader.FileListCompressedSize
 	);
 
+	HeaderReadPoint += StreamHeader.FileListEncodedSize;
+
 	// Generate list of File list entries
 	const std::map<std::size_t, fs::path> FileListEntries = Maple2::Util::ParseFileList(FileList);
 
@@ -264,9 +270,9 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	// File allocation Table
 
 	std::vector<typename PackTraits::FileHeaderType> FATable;
-	FATable.resize(StreamHeader.TotalFiles);
+	FATable.resize(StreamHeader.TotalFiles, typename PackTraits::FileHeaderType{});
 	Maple2::Util::DecryptStream(
-		HeaderFile.begin() + 4 + sizeof(typename PackTraits::StreamType) + StreamHeader.FileListEncodedSize,
+		HeaderReadPoint,
 		StreamHeader.FATEncodedSize,
 		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
 		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
@@ -301,7 +307,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		std::string FileData;
 		FileData.resize(FATable[i].Size);
 		Maple2::Util::DecryptStream(
-			DataFile.begin() + FATable[i].Offset,
+			DataFile.cbegin() + FATable[i].Offset,
 			FATable[i].EncodedSize,
 			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
 			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
@@ -326,6 +332,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 			fs::path(FileListEntries.at(i + 1)).string().c_str(),                 // Current file
 			TaskIndex
 		);
+
 		std::ofstream DumpFile;
 		DumpFile.open(
 			DestPath / FileListEntries.at(i + 1),
