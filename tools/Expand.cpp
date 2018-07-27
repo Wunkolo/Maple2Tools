@@ -102,8 +102,11 @@ int main(int argc, char* argv[])
 	{
 		if( fs::is_regular_file(CurEntry) )
 		{
+			const fs::path CurEntryRelative = CurEntry.path().string().substr(
+				SourcePath.parent_path().string().length()
+			);
 			const fs::path& CurSource = CurEntry.path();
-			const fs::path CurDest = DestPath / CurEntry.path();
+			const fs::path CurDest = DestPath / CurEntryRelative;
 
 			// Create shadow original files
 			try
