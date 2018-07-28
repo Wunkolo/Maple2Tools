@@ -35,6 +35,13 @@ void HexDump(const char* Description, const void* Data, std::size_t Size);
 
 int main(int argc, char* argv[])
 {
+	std::puts(
+		"MapleStory2 Filesystem expander:\n"
+		"\t\"Flattens\" a filesystem, expanding all m2h/m2d files it encounters\n"
+		"\tinto a folder of the same name\n"
+		"Build Date: " __TIMESTAMP__ "\n"
+		"\t- wunkolo <wunkolo@gmail.com>"
+	);
 	std::string ShadowOption = "sym";
 	fs::path SourcePath;
 	fs::path DestPath;
@@ -81,13 +88,6 @@ int main(int argc, char* argv[])
 		CommandParser.writeToStream(std::cout);
 		return EXIT_SUCCESS;
 	}
-	std::puts(
-		"MapleStory2 Filesystem expander:\n"
-		"\t\"Flattens\" a filesystem, expanding all m2h/m2d files it encounters\n"
-		"\tinto a folder of the same name\n"
-		"Build Date: " __TIMESTAMP__ "\n"
-		"\t- wunkolo <wunkolo@gmail.com>"
-	);
 	fs::create_directory(DestPath);
 
 	if( !fs::exists(SourcePath) || !fs::exists(DestPath) )
