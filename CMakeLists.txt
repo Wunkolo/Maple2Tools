@@ -16,16 +16,12 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 ### Global includes
 include_directories(
 	include
-	dependencies/Clara/include
-	dependencies/mio/include
 )
 
-### Optimizations
+### Flags
 if( MSVC )
 	add_compile_options( /W3 )
 elseif( CMAKE_COMPILER_IS_GNUCXX )
-	add_compile_options( -march=native )
-	add_compile_options( -Ofast )
 	add_compile_options( -Wall )
 	add_compile_options( -Wextra )
 endif()
@@ -33,6 +29,11 @@ endif()
 
 ## Threads
 find_package( Threads REQUIRED )
+
+## mio: Multiplatform memory mapped IO
+add_subdirectory(
+	dependencies/mio
+)
 
 ### Targets
 add_library(
@@ -46,12 +47,19 @@ target_link_libraries(
 	PRIVATE
 	cryptopp
 )
-## M2H Research
+
+## MapleStory2 Tools
 
 # Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(
 	Expand
 	tools/Expand.cpp
+)
+target_include_directories(
+	Expand
+	PRIVATE
+	dependencies/Clara/include
+	mio
 )
 target_link_libraries(
 	Expand
@@ -60,7 +68,7 @@ target_link_libraries(
 	${CMAKE_THREAD_LIBS_INIT}
 )
 
-# Packs a folder into a .m2h/.m2d pai
+# Packs a folder into a .m2h/.m2d pair
 add_executable(
 	Pack
 	tools/Pack.cpp
