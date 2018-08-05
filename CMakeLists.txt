@@ -59,12 +59,12 @@ target_include_directories(
 	Expand
 	PRIVATE
 	dependencies/Clara/include
-	mio
 )
 target_link_libraries(
 	Expand
 	PRIVATE
 	Maple2
+	mio
 	${CMAKE_THREAD_LIBS_INIT}
 )
 
