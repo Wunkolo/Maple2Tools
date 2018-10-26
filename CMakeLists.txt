@@ -1,10 +1,5 @@
-cmake_minimum_required( VERSION 3.2.2 )
-project( MapleTools )
-
-### Standard
-set( CMAKE_CXX_STANDARD 17 )
-set( CMAKE_CXX_STANDARD_REQUIRED ON )
-set( CMAKE_CXX_EXTENSIONS ON )
+cmake_minimum_required( VERSION 3.8 )
+project( MapleTools VERSION 1.0.0 LANGUAGES C CXX )
 
 ### Verbosity
 set( CMAKE_COLOR_MAKEFILE ON )
@@ -12,20 +7,6 @@ set( CMAKE_VERBOSE_MAKEFILE ON )
 
 # Generate 'compile_commands.json' for clang_complete
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
-
-### Global includes
-include_directories(
-	include
-)
-
-### Flags
-if( MSVC )
-	add_compile_options( /W3 )
-elseif( CMAKE_COMPILER_IS_GNUCXX )
-	add_compile_options( -Wall )
-	add_compile_options( -Wextra )
-endif()
-
 
 ## Threads
 find_package( Threads REQUIRED )
@@ -36,24 +17,44 @@ add_subdirectory(
 )
 
 ### Targets
+
+## Maple 2 library
 add_library(
 	Maple2
 	STATIC
 	source/Maple2/Keys.cpp
 	source/Maple2/Util.cpp
 )
+target_include_directories(
+	Maple2
+	PUBLIC
+	include
+)
+set_target_properties(
+	Maple2
+	PROPERTIES
+	CXX_STANDARD 17
+	CXX_STANDARD_REQUIRED YES
+	CXX_EXTENSIONS ON
+)
+
 target_link_libraries(
 	Maple2
 	PRIVATE
 	cryptopp
 )
 
-## MapleStory2 Tools
-
-# Expands .m2h/.m2d files into folder and "flattens" the virtual file system
+## Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(
 	Expand
 	tools/Expand.cpp
+)
+set_target_properties(
+	Expand
+	PROPERTIES
+	CXX_STANDARD 17
+	CXX_STANDARD_REQUIRED YES
+	CXX_EXTENSIONS ON
 )
 target_include_directories(
 	Expand
@@ -72,6 +73,13 @@ target_link_libraries(
 add_executable(
 	Pack
 	tools/Pack.cpp
+)
+set_target_properties(
+	Pack
+	PROPERTIES
+	CXX_STANDARD 17
+	CXX_STANDARD_REQUIRED YES
+	CXX_EXTENSIONS ON
 )
 target_link_libraries(
 	Pack
