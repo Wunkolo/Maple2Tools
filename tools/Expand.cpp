@@ -43,8 +43,10 @@ int main(int argc, char* argv[])
 		"\t- wunkolo <wunkolo@gmail.com>"
 	);
 	std::string ShadowOption = "sym";
-	fs::path SourcePath;
-	fs::path DestPath;
+	// Workaround for Clara parsing an fs::path string with a space in it:
+	// https://github.com/catchorg/Clara/issues/55
+	std::string SourcePath;
+	std::string DestPath;
 	bool ShowHelp = false;
 	auto CommandParser = 
 		clara::Help( ShowHelp ) |
@@ -103,7 +105,7 @@ int main(int argc, char* argv[])
 		if( fs::is_regular_file(CurEntry) )
 		{
 			const fs::path CurEntryRelative = CurEntry.path().string().substr(
-				SourcePath.parent_path().string().length()
+				fs::path(SourcePath).parent_path().string().length()
 			);
 			const fs::path& CurSource = CurEntry.path();
 			const fs::path CurDest = DestPath / CurEntryRelative;
