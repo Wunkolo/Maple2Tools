@@ -419,7 +419,7 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t Tas
 		}
 		}
 	}
-	catch(...)
+	catch(const std::exception& Exception)
 	{
 		std::printf(
 			"\033[%zuB"                                      // Move Down
@@ -429,7 +429,7 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t Tas
 			"\033[%zuA",                                     // Move up
 			TaskIndex,
 			HeaderPath.stem().string().c_str(),
-			std::current_exception().__cxa_exception_type()->name(),
+			Exception.what(),
 			TaskIndex
 		);
 		return false;
