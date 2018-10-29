@@ -44,25 +44,33 @@ if(MSVC)
 		PROJ cryptopp
 		GIT_REPOSITORY git@github.com:weidai11/cryptopp.git
 		GIT_TAG master
+		PREFIX cryptopp
 	)
-	set(CRYPTOPP_CMAKE_DIR dependencies/cryptopp-cmake)
-	set(CRYPTOPP_SRC_DIR ${CMAKE_BINARY_DIR}/cryptopp-src)
 	# Copy files from cryptopp-cmake to the working sources dir
 	configure_file(
-		${CRYPTOPP_CMAKE_DIR}/CMakeLists.txt
-		${CRYPTOPP_SRC_DIR}/CMakeLists.txt COPYONLY
+		dependencies/cryptopp-cmake/CMakeLists.txt
+		${CMAKE_BINARY_DIR}/cryptopp/cryptopp-src/CMakeLists.txt COPYONLY
 	)
 	configure_file(
-		${CRYPTOPP_CMAKE_DIR}/cryptopp-config.cmake
-		${CRYPTOPP_SRC_DIR}/cryptopp-config.cmake COPYONLY
+		dependencies/cryptopp-cmake/cryptopp-config.cmake
+		${CMAKE_BINARY_DIR}/cryptopp/cryptopp-src/cryptopp-config.cmake COPYONLY
 	)
 	add_subdirectory(
-		${CMAKE_BINARY_DIR}/cryptopp-src ${CMAKE_BINARY_DIR}/cryptopp-build
+		${CMAKE_BINARY_DIR}/cryptopp/cryptopp-src ${CMAKE_BINARY_DIR}/cryptopp/cryptopp-build
+	)
+	# create includes
+	file(
+		GLOB cryptopp_HEADERS
+		"${CMAKE_BINARY_DIR}/cryptopp/cryptopp-src/*.h"
+	)
+	file(
+		COPY ${cryptopp_HEADERS}
+		DESTINATION ${CMAKE_BINARY_DIR}/cryptopp/include/cryptopp
 	)
 	target_include_directories(
 		Maple2
 		PRIVATE
-		${CMAKE_BINARY_DIR}/cryptopp-src
+		${CMAKE_BINARY_DIR}/cryptopp/include/
 	)
 	target_link_libraries(
 		Maple2
