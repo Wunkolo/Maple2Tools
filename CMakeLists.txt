@@ -38,11 +38,44 @@ set_target_properties(
 	CXX_EXTENSIONS ON
 )
 
-target_link_libraries(
-	Maple2
-	PRIVATE
-	cryptopp
-)
+if(MSVC)
+	include(dependencies/DownloadProject/DownloadProject.cmake)
+	download_project(
+		PROJ cryptopp
+		GIT_REPOSITORY git@github.com:weidai11/cryptopp.git
+		GIT_TAG master
+	)
+	set(CRYPTOPP_CMAKE_DIR dependencies/cryptopp-cmake)
+	set(CRYPTOPP_SRC_DIR ${CMAKE_BINARY_DIR}/cryptopp-src)
+	# Copy files from cryptopp-cmake to the working sources dir
+	configure_file(
+		${CRYPTOPP_CMAKE_DIR}/CMakeLists.txt
+		${CRYPTOPP_SRC_DIR}/CMakeLists.txt COPYONLY
+	)
+	configure_file(
+		${CRYPTOPP_CMAKE_DIR}/cryptopp-config.cmake
+		${CRYPTOPP_SRC_DIR}/cryptopp-config.cmake COPYONLY
+	)
+	add_subdirectory(
+		${CMAKE_BINARY_DIR}/cryptopp-src ${CMAKE_BINARY_DIR}/cryptopp-build
+	)
+	target_include_directories(
+		Maple2
+		PRIVATE
+		${CMAKE_BINARY_DIR}/cryptopp-src
+	)
+	target_link_libraries(
+		Maple2
+		PRIVATE
+		cryptopp-static
+	)
+else()
+	target_link_libraries(
+		Maple2
+		PRIVATE
+		cryptopp
+	)
+endif()
 
 ## Expands .m2h/.m2d files into folder and "flattens" the virtual file system
 add_executable(

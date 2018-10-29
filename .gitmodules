@@ -4,3 +4,9 @@
 [submodule "dependencies/mio"]
 	path = dependencies/mio
 	url = https://github.com/mandreyel/mio.git
+[submodule "dependencies/cryptopp-cmake"]
+	path = dependencies/cryptopp-cmake
+	url = git@github.com:noloader/cryptopp-cmake.git
+[submodule "dependencies/DownloadProject"]
+	path = dependencies/DownloadProject
+	url = git@github.com:Crascit/DownloadProject.git
