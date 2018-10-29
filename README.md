@@ -11,7 +11,7 @@ Research and reverse engineering of [Nexon](http://nexon.net)'s [MapleStory 2](h
 
 Clone the repository:
 
-`git clone https://github.com/Wunkolo/Maple2Tools`
+`git clone --recursive https://github.com/Wunkolo/Maple2Tools`
 
 ## Windows
 
