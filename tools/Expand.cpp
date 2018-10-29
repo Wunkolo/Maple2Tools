@@ -95,6 +95,11 @@ int main(int argc, char* argv[])
 	if( !fs::exists(SourcePath) || !fs::exists(DestPath) )
 	{
 		std::puts("Invalid source/dest paths");
+		std::wprintf(
+			L"Source: %s\nDest:%s",
+			SourcePath.c_str(),
+			DestPath.c_str()
+		);
 		return EXIT_FAILURE;
 	}
 
