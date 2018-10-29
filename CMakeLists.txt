@@ -1,4 +1,6 @@
-cmake_minimum_required( VERSION 3.8 )
+# 3.10 required for some of these compiler options
+# such as CXX_STANDARD 17 for MSVC
+cmake_minimum_required( VERSION 3.10 )
 project( MapleTools VERSION 1.0.0 LANGUAGES C CXX )
 
 ### Verbosity
