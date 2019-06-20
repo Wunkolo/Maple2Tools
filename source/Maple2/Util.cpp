@@ -22,8 +22,7 @@ std::tuple<
 	std::uint64_t  // Encoded Size
 > EncryptString(
 	const std::string& Data,
-	const std::uint8_t IV_LUT[128][16],
-	const std::uint8_t Key_LUT[128][32],
+	const std::uint8_t IV_LUT[128][16], const std::uint8_t Key_LUT[128][32],
 	bool Compress
 )
 {
@@ -38,27 +37,19 @@ std::tuple<
 		// Compress
 		std::string Compressed;
 		CryptoPP::StringSource(
-			Data,
-			true,
-			new CryptoPP::ZlibCompressor(
-				new CryptoPP::StringSink(Compressed)
-			)
+			Data, true,
+			new CryptoPP::ZlibCompressor(new CryptoPP::StringSink(Compressed))
 		);
 		CompressedSize = Compressed.size();
 		// Encrypt(AES) + Base64
 		Encryptor.SetKeyWithIV(
-			Key_LUT[CompressedSize % 128],
-			32,
-			IV_LUT[CompressedSize % 128]
+			Key_LUT[CompressedSize % 128], 32, IV_LUT[CompressedSize % 128]
 		);
 		CryptoPP::StringSource(
-			Compressed,
-			true,
+			Compressed, true,
 			new CryptoPP::StreamTransformationFilter(
 				Encryptor,
-				new CryptoPP::Base64Encoder(
-					new CryptoPP::StringSink(Encoded)
-				)
+				new CryptoPP::Base64Encoder(new CryptoPP::StringSink(Encoded))
 			)
 		);
 	}
@@ -66,29 +57,20 @@ std::tuple<
 	{
 		// Encrypt(AES) + Base64
 		Encryptor.SetKeyWithIV(
-			Key_LUT[Data.size() % 128],
-			32,
-			IV_LUT[Data.size() % 128]
+			Key_LUT[Data.size() % 128], 32, IV_LUT[Data.size() % 128]
 		);
 		CryptoPP::StringSource(
-			Data,
-			true,
+			Data, true,
 			new CryptoPP::StreamTransformationFilter(
 				Encryptor,
-				new CryptoPP::Base64Encoder(
-					new CryptoPP::StringSink(Encoded)
-				)
+				new CryptoPP::Base64Encoder(new CryptoPP::StringSink(Encoded))
 			)
 		);
 		CompressedSize = Encoded.size();
 	}
 
 	Encoded.pop_back(); // Remove trailing "\n"
-	return std::make_tuple(
-		Encoded,
-		CompressedSize,
-		Encoded.size()
-	);
+	return std::make_tuple(Encoded, CompressedSize, Encoded.size());
 }
 
 std::tuple<
@@ -97,8 +79,7 @@ std::tuple<
 	std::uint64_t  // Encoded Size
 > EncryptFile(
 	std::ifstream& FileStream,
-	const std::uint8_t IV_LUT[128][16],
-	const std::uint8_t Key_LUT[128][32],
+	const std::uint8_t IV_LUT[128][16], const std::uint8_t Key_LUT[128][32],
 	bool Compress
 )
 {
@@ -113,27 +94,19 @@ std::tuple<
 		// Compress
 		std::string Compressed;
 		CryptoPP::FileSource(
-			FileStream,
-			true,
-			new CryptoPP::ZlibCompressor(
-				new CryptoPP::StringSink(Compressed)
-			)
+			FileStream, true,
+			new CryptoPP::ZlibCompressor(new CryptoPP::StringSink(Compressed))
 		);
 		CompressedSize = Compressed.size();
 		// Encrypt(AES) + Base64
 		Encryptor.SetKeyWithIV(
-			Key_LUT[CompressedSize % 128],
-			32,
-			IV_LUT[CompressedSize % 128]
+			Key_LUT[CompressedSize % 128], 32, IV_LUT[CompressedSize % 128]
 		);
 		CryptoPP::StringSource(
-			Compressed,
-			true,
+			Compressed, true,
 			new CryptoPP::StreamTransformationFilter(
 				Encryptor,
-				new CryptoPP::Base64Encoder(
-					new CryptoPP::StringSink(Encoded)
-				)
+				new CryptoPP::Base64Encoder(new CryptoPP::StringSink(Encoded))
 			)
 		);
 	}
@@ -142,39 +115,28 @@ std::tuple<
 		// Encrypt(AES) + Base64
 		FileStream.seekg(0, std::ios::end);
 		Encryptor.SetKeyWithIV(
-			Key_LUT[FileStream.tellg() % 128],
-			32,
+			Key_LUT[FileStream.tellg() % 128], 32,
 			IV_LUT[FileStream.tellg() % 128]
 		);
 		FileStream.seekg(0, std::ios::beg);
 		CryptoPP::FileSource(
-			FileStream,
-			true,
+			FileStream, true,
 			new CryptoPP::StreamTransformationFilter(
 				Encryptor,
-				new CryptoPP::Base64Encoder(
-					new CryptoPP::StringSink(Encoded)
-				)
+				new CryptoPP::Base64Encoder(new CryptoPP::StringSink(Encoded))
 			)
 		);
 		CompressedSize = Encoded.size();
 	}
 
 	Encoded.pop_back(); // Remove trailing "\n"
-	return std::make_tuple(
-		Encoded,
-		CompressedSize,
-		Encoded.size()
-	);
+	return std::make_tuple(Encoded,CompressedSize, Encoded.size());
 }
 
 void DecryptStream(
-	const void* Encoded,
-	std::size_t EncodedSize,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
-	void* Decoded,
-	std::size_t DecodedSize,
+	const void* Encoded, std::size_t EncodedSize,
+	const std::uint8_t IV[16], const std::uint8_t Key[32],
+	void* Decoded, std::size_t DecodedSize,
 	bool Compressed
 )
 {
@@ -186,15 +148,13 @@ void DecryptStream(
 	{
 		CryptoPP::ArraySource(
 			static_cast<const CryptoPP::byte*>(Encoded),
-			EncodedSize,
-			true,
+			EncodedSize, true,
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					Decryptor,
 					new CryptoPP::ZlibDecompressor(
 						new CryptoPP::ArraySink(
-							static_cast<CryptoPP::byte*>(Decoded),
-							DecodedSize
+							static_cast<CryptoPP::byte*>(Decoded), DecodedSize
 						)
 					)
 				)
@@ -205,14 +165,12 @@ void DecryptStream(
 	{
 		CryptoPP::ArraySource(
 			static_cast<const CryptoPP::byte*>(Encoded),
-			EncodedSize,
-			true,
+			EncodedSize, true,
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					Decryptor,
 					new CryptoPP::ArraySink(
-						static_cast<CryptoPP::byte*>(Decoded),
-						DecodedSize
+						static_cast<CryptoPP::byte*>(Decoded), DecodedSize
 					)
 				)
 			)
@@ -221,12 +179,9 @@ void DecryptStream(
 }
 
 void DecryptStreamToStream(
-	const void* Encoded,
-	std::size_t EncodedSize,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
-	std::ostream& OutputStream,
-	bool Compressed
+	const void* Encoded, std::size_t EncodedSize,
+	const std::uint8_t IV[16], const std::uint8_t Key[32],
+	std::ostream& OutputStream, bool Compressed
 )
 {
 	CryptoPP::CTR_Mode<CryptoPP::AES>::Decryption Decryptor;
@@ -237,15 +192,12 @@ void DecryptStreamToStream(
 	{
 		CryptoPP::ArraySource(
 			static_cast<const CryptoPP::byte*>(Encoded),
-			EncodedSize,
-			true,
+			EncodedSize, true,
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
 					Decryptor,
 					new CryptoPP::ZlibDecompressor(
-						new CryptoPP::FileSink(
-							OutputStream
-						)
+						new CryptoPP::FileSink(OutputStream)
 					)
 				)
 			)
@@ -255,14 +207,10 @@ void DecryptStreamToStream(
 	{
 		CryptoPP::ArraySource(
 			static_cast<const CryptoPP::byte*>(Encoded),
-			EncodedSize,
-			true,
+			EncodedSize, true,
 			new CryptoPP::Base64Decoder(
 				new CryptoPP::StreamTransformationFilter(
-					Decryptor,
-					new CryptoPP::FileSink(
-						OutputStream
-					)
+					Decryptor, new CryptoPP::FileSink(OutputStream)
 				)
 			)
 		);
@@ -276,10 +224,7 @@ std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
 	static const std::regex RegExNewline("[\r\n]+");
 
 	std::sregex_token_iterator TokenIter(
-		FileList.cbegin(),
-		FileList.cend(),
-		RegExNewline,
-		-1
+		FileList.cbegin(), FileList.cend(), RegExNewline, -1
 	);
 
 	const std::sregex_token_iterator TokenEnd;
@@ -288,8 +233,7 @@ std::map<std::size_t, fs::path> ParseFileList(const std::string& FileList)
 	{
 		const std::string CurFileLine = *TokenIter;
 		const std::string HeaderFileIndex = CurFileLine.substr(
-			0,
-			CurFileLine.find_first_of(',')
+			0, CurFileLine.find_first_of(',')
 		);
 		const fs::path FileName = CurFileLine.substr(
 			CurFileLine.find_last_of(',') + 1

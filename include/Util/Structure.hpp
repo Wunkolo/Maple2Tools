@@ -52,8 +52,7 @@ public:
 	FieldType& operator() ()
 	{
 		static_assert(
-			offsetof(Field,Data) == FieldOffset,
-			"Field offset not being enforced"
+			offsetof(Field,Data) == FieldOffset, "Field offset not being enforced"
 		);
 		return Data;
 	}

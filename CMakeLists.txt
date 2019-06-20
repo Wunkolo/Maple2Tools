@@ -112,7 +112,7 @@ target_link_libraries(
 	${CMAKE_THREAD_LIBS_INIT}
 )
 
-# Packs a folder into a .m2h/.m2d pair
+## Packs a folder into a .m2h/.m2d pair
 add_executable(
 	Pack
 	tools/Pack.cpp

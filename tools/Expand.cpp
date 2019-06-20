@@ -95,11 +95,6 @@ int main(int argc, char* argv[])
 	if( !fs::exists(SourcePath) || !fs::exists(DestPath) )
 	{
 		std::puts("Invalid source/dest paths");
-		std::wprintf(
-			L"Source: %s\nDest:%s",
-			SourcePath.c_str(),
-			DestPath.c_str()
-		);
 		return EXIT_FAILURE;
 	}
 
@@ -126,27 +121,20 @@ int main(int argc, char* argv[])
 				case 's': // sym
 				{
 					fs::create_directories(CurDest.parent_path());
-					fs::create_symlink(
-						fs::absolute(CurSource),
-						CurDest
-					);
+					fs::create_symlink(fs::absolute(CurSource), CurDest);
 					break;
 				}
 				case 'h': // hard
 				{
 					fs::create_directories(CurDest.parent_path());
-					fs::create_hard_link(
-						fs::absolute(CurSource),
-						CurDest
-					);
+					fs::create_hard_link(fs::absolute(CurSource), CurDest);
 					break;
 				}
 				case 'c': // copy
 				{
 					fs::create_directories(CurDest.parent_path());
 					fs::copy_file(
-						fs::absolute(CurSource),
-						CurDest,
+						fs::absolute(CurSource), CurDest,
 						fs::copy_options::overwrite_existing
 					);
 					break;
@@ -161,8 +149,7 @@ int main(int argc, char* argv[])
 			{
 				std::printf(
 					"Failed to create shadow file (%s):\n%s\n",
-					CurSource.c_str(),
-					Exception.what()
+					CurSource.c_str(), Exception.what()
 				);
 				continue;
 			}
@@ -177,8 +164,7 @@ int main(int argc, char* argv[])
 				fs::create_directory(CurExpansion);
 				const auto ThreadProc = []
 				(
-					const fs::path& Source,
-					const fs::path& Expansion,
+					const fs::path& Source, const fs::path& Expansion,
 					std::size_t TaskIndex
 				) -> bool
 				{
@@ -202,25 +188,15 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	for( auto& CurTasks : Tasks )
-	{
-		CurTasks.get();
-	}
-	std::printf(
-		"\033[%zuB\n",
-		TaskIndex + 1
-	);
+	for( auto& CurTasks : Tasks ) CurTasks.get();
+	std::printf("\033[%zuB\n", TaskIndex + 1);
 	return EXIT_SUCCESS;
 }
 
 template< typename PackTraits >
 bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t TaskIndex)
 {
-	mio::ummap_source HeaderFile(
-		HeaderPath.c_str(),
-		0,
-		mio::map_entire_file
-	);
+	mio::ummap_source HeaderFile(HeaderPath.c_str(), 0, mio::map_entire_file);
 	if( !HeaderFile.is_open() )
 	{
 		// Error opening file
@@ -274,7 +250,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	HeaderReadPoint += StreamHeader.FileListEncodedSize;
 
 	// Generate list of File list entries
-	const std::map<std::size_t, fs::path> FileListEntries = Maple2::Util::ParseFileList(FileList);
+	const std::map<std::size_t, fs::path> FileListEntries
+		= Maple2::Util::ParseFileList(FileList);
 
 	////////////////////////////////////////////////////////////////////////////
 	// File allocation Table
@@ -297,18 +274,13 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	// Process data file
 	const fs::path DataPath = fs::path(HeaderPath).replace_extension(".m2d");
 
-	mio::ummap_source DataFile(
-		DataPath.c_str(),
-		0,
-		mio::map_entire_file
-	);
+	mio::ummap_source DataFile(DataPath.c_str(), 0, mio::map_entire_file);
 
 	if( !DataFile.is_open() )
 	{
 		// Error opening file
 		std::printf(
-			"Error opening file for reading: %s\n",
-			DataPath.string().c_str()
+			"Error opening file for reading: %s\n", DataPath.string().c_str()
 		);
 		return false;
 	}
@@ -333,8 +305,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 
 		std::ofstream DumpFile;
 		DumpFile.open(
-			DestPath / FileListEntries.at(i + 1),
-			std::ios::binary
+			DestPath / FileListEntries.at(i + 1), std::ios::binary
 		);
 		if( !DumpFile )
 		{
@@ -354,7 +325,6 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		);
 		DumpFile.close();
 	}
-
 	DataFile.unmap();
 
 	return true;
@@ -363,10 +333,7 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t TaskIndex)
 {
 	std::ifstream FileIn;
-	FileIn.open(
-		HeaderPath,
-		std::ios::binary
-	);
+	FileIn.open(HeaderPath, std::ios::binary);
 
 	if( !FileIn.good() )
 	{
@@ -389,36 +356,28 @@ bool DumpPackFile(const fs::path& HeaderPath, fs::path DestPath, std::size_t Tas
 		case Maple2::Identifier::MS2F:
 		{
 			Result = DumpPackStream<Maple2::PackTraits::MS2F>(
-				HeaderPath,
-				DestPath,
-				TaskIndex
+				HeaderPath, DestPath, TaskIndex
 			);
 			break;
 		}
 		case Maple2::Identifier::NS2F:
 		{
 			Result = DumpPackStream<Maple2::PackTraits::NS2F>(
-				HeaderPath,
-				DestPath,
-				TaskIndex
+				HeaderPath, DestPath, TaskIndex
 			);
 			break;
 		}
 		case Maple2::Identifier::OS2F:
 		{
 			Result = DumpPackStream<Maple2::PackTraits::OS2F>(
-				HeaderPath,
-				DestPath,
-				TaskIndex
+				HeaderPath, DestPath, TaskIndex
 			);
 			break;
 		}
 		case Maple2::Identifier::PS2F:
 		{
 			Result = DumpPackStream<Maple2::PackTraits::PS2F>(
-				HeaderPath,
-				DestPath,
-				TaskIndex
+				HeaderPath, DestPath, TaskIndex
 			);
 			break;
 		}
@@ -461,10 +420,7 @@ void HexDump(const char* Description, const void* Data, std::size_t Size)
 
 	if( Description != nullptr )
 	{
-		std::printf(
-			"\e[5m%s\e[0m:\n",
-			Description
-		);
+		std::printf("\e[5m%s\e[0m:\n", Description);
 	}
 
 	for( i = 0; i < Size; i++ )
@@ -476,10 +432,7 @@ void HexDump(const char* Description, const void* Data, std::size_t Size)
 				std::printf("  \e[0;35m%s\e[0m\n", Buffer);
 			}
 
-			std::printf(
-				"  \e[0;33m%04zx\e[0m ",
-				i
-			);
+			std::printf("  \e[0;33m%04zx\e[0m ", i);
 		}
 		std::printf(
 			" \e[0;36m%02x\e[0m",
@@ -502,8 +455,5 @@ void HexDump(const char* Description, const void* Data, std::size_t Size)
 		i++;
 	}
 
-	std::printf(
-		"  \e[0;35m%s\e[0m\n",
-		Buffer
-	);
+	std::printf("  \e[0;35m%s\e[0m\n", Buffer);
 }

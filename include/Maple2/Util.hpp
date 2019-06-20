@@ -17,8 +17,7 @@ std::tuple<
 	std::uint64_t  // Encoded Size
 > EncryptString(
 	const std::string& Data,
-	const std::uint8_t IV_LUT[128][16],
-	const std::uint8_t Key_LUT[128][32],
+	const std::uint8_t IV_LUT[128][16], const std::uint8_t Key_LUT[128][32],
 	bool Compress = true
 );
 
@@ -28,26 +27,20 @@ std::tuple<
 	std::uint64_t  // Encoded Size
 > EncryptFile(
 	std::ifstream& FileStream,
-	const std::uint8_t IV_LUT[128][16],
-	const std::uint8_t Key_LUT[128][32],
+	const std::uint8_t IV_LUT[128][16], const std::uint8_t Key_LUT[128][32],
 	bool Compress = true
 );
 
 void DecryptStream(
-	const void* Encoded,
-	std::size_t EncodedSize,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
-	void* Decoded,
-	std::size_t DecodedSize,
+	const void* Encoded, std::size_t EncodedSize,
+	const std::uint8_t IV[16], const std::uint8_t Key[32],
+	void* Decoded, std::size_t DecodedSize,
 	bool Compressed = false
 );
 
 void DecryptStreamToStream(
-	const void* Encoded,
-	std::size_t EncodedSize,
-	const std::uint8_t IV[16],
-	const std::uint8_t Key[32],
+	const void* Encoded, std::size_t EncodedSize,
+	const std::uint8_t IV[16], const std::uint8_t Key[32],
 	std::ostream& OutputStream,
 	bool Compressed = false
 );
