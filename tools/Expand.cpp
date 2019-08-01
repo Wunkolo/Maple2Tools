@@ -240,8 +240,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	Maple2::Util::DecryptStream(
 		HeaderReadPoint,
 		StreamHeader.FileListEncodedSize,
-		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % 128],
-		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % 128],
+		PackTraits::IV_LUT[StreamHeader.FileListCompressedSize % std::extent<typename std::remove_reference<decltype(PackTraits::IV_LUT)>::type, 0u>::value],
+		PackTraits::Key_LUT[StreamHeader.FileListCompressedSize % std::extent<typename std::remove_reference<decltype(PackTraits::Key_LUT)>::type, 0u>::value],
 		FileList.data(),
 		StreamHeader.FileListSize,
 		StreamHeader.FileListSize != StreamHeader.FileListCompressedSize
@@ -261,8 +261,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 	Maple2::Util::DecryptStream(
 		HeaderReadPoint,
 		StreamHeader.FATEncodedSize,
-		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % 128],
-		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % 128],
+		PackTraits::IV_LUT[StreamHeader.FATCompressedSize % std::extent<typename std::remove_reference<decltype(PackTraits::IV_LUT)>::type, 0u>::value],
+		PackTraits::Key_LUT[StreamHeader.FATCompressedSize % std::extent<typename std::remove_reference<decltype(PackTraits::Key_LUT)>::type, 0u>::value],
 		FATable.data(),
 		StreamHeader.TotalFiles * sizeof(typename PackTraits::FileHeaderType),
 		StreamHeader.FATSize != StreamHeader.FATCompressedSize
@@ -318,8 +318,8 @@ bool DumpPackStream(const fs::path& HeaderPath, fs::path DestPath,std::size_t Ta
 		Maple2::Util::DecryptStreamToStream(
 			DataFile.cbegin() + FATable[i].Offset,
 			FATable[i].EncodedSize,
-			PackTraits::IV_LUT[FATable[i].CompressedSize % 128],
-			PackTraits::Key_LUT[FATable[i].CompressedSize % 128],
+			PackTraits::IV_LUT[FATable[i].CompressedSize % std::extent<typename std::remove_reference<decltype(PackTraits::IV_LUT)>::type, 0u>::value],
+			PackTraits::Key_LUT[FATable[i].CompressedSize % std::extent<typename std::remove_reference<decltype(PackTraits::Key_LUT)>::type, 0u>::value],
 			DumpFile,
 			FATable[i].Size != FATable[i].CompressedSize
 		);
